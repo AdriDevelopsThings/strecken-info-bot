@@ -1,0 +1,22 @@
+[package]
+name = "strecken-info-telegram"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4.24"
+chrono-tz = "0.8.1"
+dotenv = "0.15.0"
+md5 = "0.7.0"
+native-tls = { version = "0.2.11", features = ["vendored"] }
+r2d2 = { version = "0.8.10", default-features = false }
+r2d2_sqlite = { version = "0.21.0", default-features = false, features = ["bundled"] }
+strecken-info = "0.1.6"
+telexide = "0.1.12"
+tokio = { version = "1.26.0", features = ["full"] }
+typemap_rev = "0.3.0"
+
+[profile.release]
+lto = true
