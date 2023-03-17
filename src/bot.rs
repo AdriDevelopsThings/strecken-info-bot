@@ -91,5 +91,6 @@ pub async fn run_bot(
         data.insert::<HashMapDatabase>(database);
     }
 
+    println!("Telegram bot started");
     client.start().await
 }
