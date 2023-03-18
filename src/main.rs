@@ -14,8 +14,10 @@ mod format;
 
 #[tokio::main]
 async fn main() {
+    env_logger::Builder::new()
+        .filter(None, log::LevelFilter::Info)
+        .init();
     dotenv().ok();
-
     let database = Database::new(
         &env::var("SQLITE_PATH").expect("No SQLITE_PATH environment variable supplied"),
     )

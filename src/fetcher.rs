@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
+use log::info;
 use r2d2_sqlite::rusqlite::params;
 use tokio::{
     sync::mpsc::{self, UnboundedSender},
@@ -14,17 +15,17 @@ use crate::{database::Database, filter::Filter, format::disruption_to_string};
 
 pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSender<(i64, String)>) {
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<Disruption>>();
-
     tokio::spawn(async move {
         let mut interval = interval(Duration::from_secs(60));
         loop {
+            interval.tick().await;
             let now = Utc::now();
             let now = now.with_timezone(&Berlin).naive_local();
             let disruptions = request_disruptions(now, now, 5000, 100, None)
                 .await
                 .unwrap();
+            info!("Fetched new disruptions");
             tx.send(disruptions).unwrap();
-            interval.tick().await;
         }
     });
 
@@ -54,6 +55,7 @@ fn fetched(
         .map(|r| r.unwrap())
         .collect::<Vec<i64>>();
 
+    let mut changes = 0;
     for disruption in disruptions {
         let hash = format!(
             "{:x}",
@@ -71,6 +73,7 @@ fn fetched(
             Err(_) => (true, false),
         };
         if send {
+            changes += 1;
             // Entry changed
             connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash]).unwrap();
             if Filter::filters(&filters, &disruption) {
@@ -83,4 +86,5 @@ fn fetched(
             }
         }
     }
+    info!("{changes} disruptions found/changed");
 }

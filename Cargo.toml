@@ -9,6 +9,8 @@ edition = "2021"
 chrono = "0.4.24"
 chrono-tz = "0.8.1"
 dotenv = "0.15.0"
+env_logger = "0.10.0"
+log = "0.4.17"
 md5 = "0.7.0"
 native-tls = { version = "0.2.11", features = ["vendored"] }
 r2d2 = { version = "0.8.10", default-features = false }

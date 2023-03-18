@@ -1,5 +1,6 @@
 use std::env;
 
+use log::info;
 use r2d2_sqlite::rusqlite::params;
 use telexide::{
     api::types::SendMessage,
@@ -31,6 +32,18 @@ async fn start(context: Context, message: Message) -> CommandResult {
             params![message.chat.get_id()],
         )
         .unwrap();
+    info!(
+        "New user {} subscribed",
+        message
+            .from
+            .map(|user| format!(
+                "{} {} ({})",
+                user.first_name,
+                user.last_name.unwrap_or_else(|| "None".to_string()),
+                user.username.unwrap_or_else(|| "None".to_string())
+            ))
+            .unwrap_or_default()
+    );
     context
         .api
         .send_message(SendMessage::new(
