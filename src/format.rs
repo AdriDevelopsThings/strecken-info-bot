@@ -1,6 +1,6 @@
 use strecken_info::Disruption;
 
-pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
+pub fn disruption_to_string(disruption: &Disruption) -> String {
     let location = if !disruption.locations.is_empty() {
         disruption
             .locations
@@ -37,12 +37,7 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
         .map(|impact| impact.impact.clone())
         .collect::<Vec<String>>();
     impacts.dedup();
-    let head = match changed {
-        true => "UPDATE: ",
-        false => "",
-    }
-    .to_string();
-    let head = head + impacts.join(", ").as_str() + "\n" + disruption.head.as_str();
+    let head = impacts.join(", ") + "\n" + disruption.head.as_str();
     let mut events = disruption
         .events
         .iter()

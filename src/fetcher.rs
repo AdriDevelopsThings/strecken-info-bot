@@ -57,13 +57,8 @@ fn fetched(
 
     let mut changes = 0;
     for disruption in disruptions {
-        let hash = format!(
-            "{:x}",
-            md5::compute(
-                (disruption.head.clone() + disruption.text.clone().unwrap_or_default().as_str())
-                    .as_bytes()
-            )
-        );
+        let message = disruption_to_string(&disruption);
+        let hash = format!("{:x}", md5::compute(message.as_bytes()));
         let (send, changed) = match connection.query_row(
             "SELECT hash FROM disruption WHERE him_id=?",
             params![&disruption.id],
@@ -77,10 +72,14 @@ fn fetched(
             // Entry changed
             connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash]).unwrap();
             if Filter::filters(&filters, &disruption) {
+                let message = match changed {
+                    true => "UPDATE: ".to_string(),
+                    false => String::new(),
+                } + message.as_str();
                 // Send this disruption to users
                 for user in &users {
                     telegram_message_sender
-                        .send((*user, disruption_to_string(&disruption, changed)))
+                        .send((*user, message.clone()))
                         .unwrap();
                 }
             }
