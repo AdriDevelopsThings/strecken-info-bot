@@ -16,7 +16,7 @@ use crate::{database::Database, filter::Filter, format::disruption_to_string};
 pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSender<(i64, String)>) {
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<Disruption>>();
     tokio::spawn(async move {
-        let mut interval = interval(Duration::from_secs(60));
+        let mut interval = interval(Duration::from_secs(120));
         loop {
             interval.tick().await;
             let now = Utc::now();

@@ -53,13 +53,14 @@ pub fn disruption_to_string(disruption: &Disruption) -> String {
     let times = events.join("\n");
 
     format!(
-        "<i><u>Ort: {location}</u></i>\n<b>{head}</b>\n\n{times}\n\n{}",
+        "<i><u>Ort: {location}</u></i>\n<b>{head}</b>\n\n{times}\n\n{}\nPriorität: {}",
         disruption
             .text
             .clone()
             .unwrap_or_default()
             .replace("<br/>", "\n")
             .replace("<br>", "\n")
-            .replace("<br />", "\n")
+            .replace("<br />", "\n"),
+        disruption.prio
     )
 }
