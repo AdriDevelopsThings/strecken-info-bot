@@ -62,7 +62,8 @@ pub fn disruption_to_string(disruption: &Disruption) -> String {
         .replace("<br />", "\n");
 
     format!(
-        "<i><u>Ort: {location}</u></i>\n<b>{head}</b>\n\n{times}\n\n{}\nPriorität: {}",
+        "<i><u>Ort: {location}</u></i>\n<b>{}</b>\n\n{times}\n\n{}\nPriorität: {}",
+        encode_text(&head),
         encode_text(&text),
         disruption.prio
     )

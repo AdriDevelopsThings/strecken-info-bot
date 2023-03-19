@@ -1,6 +1,6 @@
 use std::env;
 
-use log::info;
+use log::{error, info};
 use r2d2_sqlite::rusqlite::params;
 use telexide::{
     api::types::SendMessage,
@@ -95,7 +95,9 @@ pub async fn run_bot(
             let (chat_id, message) = receiver.recv().await.unwrap();
             let mut message = SendMessage::new(chat_id.into(), message);
             message.set_parse_mode(telexide::model::ParseMode::HTML);
-            api_client.send_message(message).await.unwrap();
+            if let Err(e) = api_client.send_message(message).await {
+                error!("Error while sending message to telegram: {e}");
+            }
         }
     });
 
