@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
-use log::info;
+use log::{error, info};
 use r2d2_sqlite::rusqlite::params;
 use tokio::{
     sync::mpsc::{self, UnboundedSender},
@@ -21,9 +21,13 @@ pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSend
             interval.tick().await;
             let now = Utc::now();
             let now = now.with_timezone(&Berlin).naive_local();
-            let disruptions = request_disruptions(now, now, 5000, 100, None)
-                .await
-                .unwrap();
+            let disruptions = match request_disruptions(now, now, 5000, 100, None).await {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("Error while fetching: {:?}, retrying in 120 seconds.", e);
+                    continue;
+                }
+            };
             info!("Fetched new disruptions");
             tx.send(disruptions).unwrap();
         }
