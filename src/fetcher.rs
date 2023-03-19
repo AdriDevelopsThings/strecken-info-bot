@@ -69,7 +69,6 @@ fn fetched(
         if send {
             changes += 1;
             // Entry changed
-            connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash])?;
             if Filter::filters(&filters, &disruption) {
                 let message = match changed {
                     true => "UPDATE: ".to_string(),
@@ -80,6 +79,7 @@ fn fetched(
                     telegram_message_sender.send((*user, message.clone()))?;
                 }
             }
+            connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash])?;
         }
     }
     info!("{changes} disruptions found/changed");
