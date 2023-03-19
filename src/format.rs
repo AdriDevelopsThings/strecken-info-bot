@@ -1,3 +1,4 @@
+use html_escape::encode_text;
 use strecken_info::Disruption;
 
 pub fn disruption_to_string(disruption: &Disruption) -> String {
@@ -52,15 +53,17 @@ pub fn disruption_to_string(disruption: &Disruption) -> String {
     events.dedup();
     let times = events.join("\n");
 
+    let text = disruption
+        .text
+        .clone()
+        .unwrap_or_default()
+        .replace("<br/>", "\n")
+        .replace("<br>", "\n")
+        .replace("<br />", "\n");
+
     format!(
         "<i><u>Ort: {location}</u></i>\n<b>{head}</b>\n\n{times}\n\n{}\nPriorität: {}",
-        disruption
-            .text
-            .clone()
-            .unwrap_or_default()
-            .replace("<br/>", "\n")
-            .replace("<br>", "\n")
-            .replace("<br />", "\n"),
+        encode_text(&text),
         disruption.prio
     )
 }
