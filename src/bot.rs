@@ -91,8 +91,7 @@ pub async fn run_bot(
         .build();
     let api_client = client.api_client.clone();
     tokio::spawn(async move {
-        loop {
-            let (chat_id, message) = receiver.recv().await.unwrap();
+        while let Some((chat_id, message)) = receiver.recv().await {
             let mut message = SendMessage::new(chat_id.into(), message);
             message.set_parse_mode(telexide::model::ParseMode::HTML);
             if let Err(e) = api_client.send_message(message).await {

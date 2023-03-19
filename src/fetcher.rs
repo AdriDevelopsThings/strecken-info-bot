@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{error::Error, time::Duration};
 
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
@@ -34,11 +34,10 @@ pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSend
     });
 
     tokio::spawn(async move {
-        loop {
-            match rx.recv().await {
-                Some(s) => fetched(database.clone(), s, telegram_message_sender.clone()),
-                None => continue,
-            };
+        while let Some(s) = rx.recv().await {
+            if let Err(e) = fetched(database.clone(), s, telegram_message_sender.clone()) {
+                error!("Error while handling new fetch: {e}");
+            }
         }
     });
 }
@@ -47,17 +46,13 @@ fn fetched(
     database: Database,
     disruptions: Vec<Disruption>,
     telegram_message_sender: UnboundedSender<(i64, String)>,
-) {
-    let connection = database.get_connection().unwrap();
+) -> Result<(), Box<dyn Error>> {
+    let connection = database.get_connection()?;
     let filters = vec![Filter::PrioFilter { min: 30 }, Filter::PlannedFilter];
-    let mut statement = connection.prepare("SELECT chat_id FROM user").unwrap();
+    let mut statement = connection.prepare("SELECT chat_id FROM user")?;
     let users = statement
-        .query_map([], |row| row.get(0))
-        .unwrap()
-        .collect::<Vec<Result<i64, r2d2_sqlite::rusqlite::Error>>>()
-        .into_iter()
-        .map(|r| r.unwrap())
-        .collect::<Vec<i64>>();
+        .query_map([], |row| row.get(0))?
+        .collect::<Result<Vec<i64>, r2d2_sqlite::rusqlite::Error>>()?;
 
     let mut changes = 0;
     for disruption in disruptions {
@@ -74,7 +69,7 @@ fn fetched(
         if send {
             changes += 1;
             // Entry changed
-            connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash]).unwrap();
+            connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash])?;
             if Filter::filters(&filters, &disruption) {
                 let message = match changed {
                     true => "UPDATE: ".to_string(),
@@ -82,12 +77,11 @@ fn fetched(
                 } + message.as_str();
                 // Send this disruption to users
                 for user in &users {
-                    telegram_message_sender
-                        .send((*user, message.clone()))
-                        .unwrap();
+                    telegram_message_sender.send((*user, message.clone()))?;
                 }
             }
         }
     }
     info!("{changes} disruptions found/changed");
+    Ok(())
 }
