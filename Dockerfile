@@ -1,5 +1,7 @@
 FROM rust as build
 WORKDIR /build
+ARG GIT_SHA
+
 
 RUN apt update
 RUN apt install libssl-dev -y
