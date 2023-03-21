@@ -1,18 +1,15 @@
-FROM rust as build
+FROM rust:alpine as build
 WORKDIR /build
 ARG GIT_SHA
 
-
-RUN apt update
-RUN apt install libssl-dev -y
+RUN apk add musl-dev
 
 COPY ./Cargo.lock ./Cargo.toml ./
 COPY ./src ./src
 
 RUN cargo build --release
-RUN chmod a+x /build/target/release/strecken-info-telegram
 
-FROM rust
+FROM scratch
 WORKDIR /app
 
 ENV PATH="$PATH:/app/bin"
@@ -22,4 +19,4 @@ COPY --from=build /build/target/release/strecken-info-telegram /app/bin/strecken
 ENV SQLITE_PATH=/database/db.sql
 VOLUME [ "/database" ]
 
-CMD ["./bin/strecken-info-telegram"]
+CMD ["/app/bin/strecken-info-telegram"]
