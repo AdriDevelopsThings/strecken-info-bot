@@ -17,8 +17,8 @@ You are able to host this bot yourself by using docker or build a binary with `c
 
 **By source**: Build a binary with ``cargo build --release`` and run the binary: You have to set the environment variable ``TELEGRAM_BOT_TOKEN`` and ``SQLITE_PATH``.
 
-It's also possible to change the value of the `FETCH_EVERY_SECONDS` environment variable to an other value as 120.
+It's also possible to change the value of the `FETCH_EVERY_SECONDS` environment variable to something other value than 120.
 
-## Feedback and Contribution
+## Feedback and contribution
 
-If you noticed some bugs or are interested in new features just create an issue. You can also contribute to this repository by forking and creating a pull request. 
+If you noticed some bugs or are interested in new features just create an issue. You can also contribute to this repository by forking this repository and creating a pull request. 
