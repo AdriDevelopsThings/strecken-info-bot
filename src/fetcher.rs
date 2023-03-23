@@ -1,8 +1,8 @@
-use std::{error::Error, time::Duration};
+use std::{env, error::Error, time::Duration};
 
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
-use log::{error, info};
+use log::{error, info, warn};
 use r2d2_sqlite::rusqlite::params;
 use tokio::{
     sync::mpsc::{self, UnboundedSender},
@@ -16,7 +16,14 @@ use crate::{database::Database, filter::Filter, format::disruption_to_string};
 pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSender<(i64, String)>) {
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<Disruption>>();
     tokio::spawn(async move {
-        let mut interval = interval(Duration::from_secs(120));
+        let fetch_every: u64 = env::var("FETCH_EVERY_SECONDS")
+            .unwrap_or_else(|_| "120".to_string())
+            .parse()
+            .expect("Error while parsing FETCH_EVERY_SECONDS environment variable");
+        if fetch_every < 60 {
+            warn!("It's not recommended to set FETCH_EVERY_SECONDS to a value below 60.");
+        }
+        let mut interval = interval(Duration::from_secs(fetch_every));
         loop {
             interval.tick().await;
             let now = Utc::now();
@@ -24,7 +31,10 @@ pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSend
             let disruptions = match request_disruptions(now, now, 5000, 100, None).await {
                 Ok(s) => s,
                 Err(e) => {
-                    error!("Error while fetching: {:?}, retrying in 120 seconds.", e);
+                    error!(
+                        "Error while fetching: {:?}, retrying in {fetch_every} seconds.",
+                        e
+                    );
                     continue;
                 }
             };
