@@ -11,7 +11,11 @@ use tokio::{
 
 use strecken_info::{geo_pos::request_disruptions, Disruption};
 
-use crate::{database::Database, filter::Filter, format::disruption_to_string};
+use crate::{
+    database::Database,
+    filter::Filter,
+    format::{disruption_to_string, hash_disruption},
+};
 
 pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSender<(i64, String)>) {
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<Disruption>>();
@@ -67,7 +71,7 @@ fn fetched(
     let mut changes = 0;
     for disruption in disruptions {
         let message = disruption_to_string(&disruption);
-        let hash = format!("{:x}", md5::compute(message.as_bytes()));
+        let hash = hash_disruption(&disruption);
         let (send, changed) = match connection.query_row(
             "SELECT hash FROM disruption WHERE him_id=?",
             params![&disruption.id],
