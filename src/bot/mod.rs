@@ -31,7 +31,8 @@ pub async fn run_bot(
             start,
             unsubscribe,
             version,
-            git
+            git,
+            feedback
         ))
         .build();
     let api_client = client.api_client.clone();

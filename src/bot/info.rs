@@ -34,3 +34,19 @@ async fn git(context: Context, message: Message) -> CommandResult {
         .await?;
     Ok(())
 }
+
+
+#[command(description = "Submit feedback or bugs")]
+async fn feedback(context: Context, message: Message) -> CommandResult {
+    context
+        .api
+        .send_message(SendMessage::new(
+            message.chat.get_id().into(),
+            format!(
+                "Just create an issue in our github repository: {}",
+                env!("CARGO_PKG_REPOSITORY")
+            ),
+        ))
+        .await?;
+    Ok(())
+}
