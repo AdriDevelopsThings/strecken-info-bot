@@ -35,7 +35,6 @@ async fn git(context: Context, message: Message) -> CommandResult {
     Ok(())
 }
 
-
 #[command(description = "Submit feedback or bugs")]
 async fn feedback(context: Context, message: Message) -> CommandResult {
     context

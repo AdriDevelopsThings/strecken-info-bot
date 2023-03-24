@@ -1,15 +1,19 @@
 use strecken_info::Disruption;
 
 pub enum Filter {
-    PrioFilter { min: u8 },
-    PlannedFilter,
+    Prio { min: u8 },
+    Planned,
+    TooLongDisruption { days: u8 },
 }
 
 impl Filter {
     pub fn filter(&self, disruption: &Disruption) -> bool {
         match self {
-            Self::PrioFilter { min } => &disruption.prio <= min,
-            Self::PlannedFilter => !disruption.planned,
+            Self::Prio { min } => &disruption.prio <= min,
+            Self::Planned => !disruption.planned,
+            Self::TooLongDisruption { days } => {
+                (disruption.end_date - disruption.start_date).num_days() < *days as i64
+            }
         }
     }
 
