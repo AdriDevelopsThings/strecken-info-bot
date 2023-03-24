@@ -1,6 +1,7 @@
 use clap::Parser;
 use dotenv::dotenv;
-use std::{env, process};
+use r2d2_sqlite::rusqlite::params;
+use std::{env, process, io::{self, Write}};
 
 use bot::create_client;
 use database::Database;
@@ -14,6 +15,8 @@ mod database;
 struct Args {
     #[arg(short, long)]
     show_users: bool,
+    #[arg(short, long)]
+    reset_disruptions: bool
 }
 
 #[tokio::main]
@@ -67,6 +70,20 @@ async fn main() {
                     chat.username.unwrap_or_default()
                 ),
             }
+        }
+    } else if args.reset_disruptions {
+        let connection = database.get_connection().unwrap();
+
+        print!("Are you sure to delete all saved disruptions? Many new updates will be sent after this? [y/n] ");
+        io::stdout().flush().unwrap();
+        let mut user_input = String::new();
+        let stdin = io::stdin();
+        stdin.read_line(&mut user_input).unwrap();
+        if user_input == "y\n" {
+            connection.execute("DELETE FROM disruption", params![]).unwrap();
+            println!("All saved disruptions removed");   
+        } else {
+            println!("Aborted");
         }
     } else {
         eprintln!("No action supplied. Try --help to show all actions.");
