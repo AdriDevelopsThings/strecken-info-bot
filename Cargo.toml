@@ -3,12 +3,22 @@ name = "strecken-info-telegram"
 version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/AdriDevelopsThings/strecken-info-telegram"
+default-run = "strecken-info-telegram"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "strecken-info-telegram"
+path = "src/main.rs"
+
+[[bin]]
+name = "cli"
+path = "src/cli.rs"
 
 [dependencies]
 chrono = "0.4.24"
 chrono-tz = "0.8.1"
+clap = { version = "4.1.11", features = ["derive"] }
 dotenv = "0.15.0"
 env_logger = "0.10.0"
 html-escape = "0.2.13"
@@ -17,7 +27,7 @@ md5 = "0.7.0"
 r2d2 = { version = "0.8.10", default-features = false }
 r2d2_sqlite = { version = "0.21.0", default-features = false, features = ["bundled"] }
 strecken-info = { version = "0.1.6", default-features = false, features = ["rustls-tls"] }
-telexide = "0.1.13"
+telexide = { git = "https://github.com/AdriDevelopsThings/telexide", branch = "fix/get-chat" }
 tokio = { version = "1.26.0", features = ["full"] }
 typemap_rev = "0.3.0"
 
