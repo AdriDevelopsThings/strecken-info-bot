@@ -1490,8 +1490,7 @@ checksum = "2047c6ded9c721764247e62cd3b03c09ffc529b2ba5b10ec482ae507a4a70160"
 [[package]]
 name = "telexide"
 version = "0.1.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54e068d71dd0e22d177b63ad21420513114fab0e1bd0dd4797d972296bfadf42"
+source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fix/get-chat#70d6a9f52ec036c9881a5d2c8c8383b801043888"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1513,8 +1512,7 @@ dependencies = [
 [[package]]
 name = "telexide_proc_macros"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab808f6763ee9001c35514e6ffb0054f8f4baafc6126f6c41fc5dba09eee1a93"
+source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fix/get-chat#70d6a9f52ec036c9881a5d2c8c8383b801043888"
 dependencies = [
  "proc-macro2",
  "quote",
