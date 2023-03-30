@@ -1,3 +1,5 @@
+use chrono::Utc;
+use chrono_tz::Europe::Berlin;
 use html_escape::encode_text;
 use strecken_info::Disruption;
 
@@ -56,7 +58,7 @@ pub fn hash_disruption(disruption: &Disruption) -> String {
     format!("{:x}", md5::compute(input.as_bytes()))
 }
 
-pub fn disruption_to_string(disruption: &Disruption) -> String {
+pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
     let location = if !disruption.locations.is_empty() {
         disruption
             .locations
@@ -116,8 +118,24 @@ pub fn disruption_to_string(disruption: &Disruption) -> String {
         .replace("<br>", "\n")
         .replace("<br />", "\n");
 
+    let end = disruption
+        .end_date
+        .and_time(disruption.end_time)
+        .and_local_timezone(Berlin)
+        .unwrap();
+
+    let prefix = match changed {
+        true => {
+            if Utc::now() > end {
+                "Beendet: "
+            } else {
+                "Update: "
+            }
+        }
+        false => "",
+    };
     format!(
-        "<i><u>Ort: {location}</u></i>\n<b>{}</b>\n\n{times}\n\n{}\nPriorität: {}",
+        "{prefix}<i><u>Ort: {location}</u></i>\n<b>{}</b>\n\n{times}\n\n{}\nPriorität: {}",
         encode_text(&head),
         encode_text(&text),
         disruption.prio

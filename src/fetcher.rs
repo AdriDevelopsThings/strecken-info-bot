@@ -74,7 +74,6 @@ fn fetched(
 
     let mut changes = 0;
     for disruption in disruptions {
-        let message = disruption_to_string(&disruption);
         let hash = hash_disruption(&disruption);
         let (send, changed) = match connection.query_row(
             "SELECT hash FROM disruption WHERE him_id=?",
@@ -88,10 +87,7 @@ fn fetched(
             changes += 1;
             // Entry changed
             if Filter::filters(&filters, &disruption) {
-                let message = match changed {
-                    true => "UPDATE: ".to_string(),
-                    false => String::new(),
-                } + message.as_str();
+                let message = disruption_to_string(&disruption, changed);
                 // Send this disruption to users
                 for user in &users {
                     telegram_message_sender.send((*user, message.clone()))?;

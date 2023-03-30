@@ -1,7 +1,11 @@
 use clap::Parser;
 use dotenv::dotenv;
 use r2d2_sqlite::rusqlite::params;
-use std::{env, process, io::{self, Write}};
+use std::{
+    env,
+    io::{self, Write},
+    process,
+};
 
 use bot::create_client;
 use database::Database;
@@ -16,7 +20,7 @@ struct Args {
     #[arg(short, long)]
     show_users: bool,
     #[arg(short, long)]
-    reset_disruptions: bool
+    reset_disruptions: bool,
 }
 
 #[tokio::main]
@@ -80,8 +84,10 @@ async fn main() {
         let stdin = io::stdin();
         stdin.read_line(&mut user_input).unwrap();
         if user_input == "y\n" {
-            connection.execute("DELETE FROM disruption", params![]).unwrap();
-            println!("All saved disruptions removed");   
+            connection
+                .execute("DELETE FROM disruption", params![])
+                .unwrap();
+            println!("All saved disruptions removed");
         } else {
             println!("Aborted");
         }
