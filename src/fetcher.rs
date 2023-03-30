@@ -2,7 +2,7 @@ use std::{env, error::Error, time::Duration};
 
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
-use log::{error, info, warn};
+use log::{error, warn, debug};
 use r2d2_sqlite::rusqlite::params;
 use tokio::{
     sync::mpsc::{self, UnboundedSender},
@@ -42,7 +42,7 @@ pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSend
                     continue;
                 }
             };
-            info!("Fetched new disruptions");
+            debug!("Fetched new disruptions");
             tx.send(disruptions).unwrap();
         }
     });
@@ -96,6 +96,6 @@ fn fetched(
             connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash])?;
         }
     }
-    info!("{changes} disruptions found/changed");
+    debug!("{changes} disruptions found/changed");
     Ok(())
 }
