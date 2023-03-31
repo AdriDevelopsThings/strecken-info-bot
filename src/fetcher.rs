@@ -2,7 +2,7 @@ use std::{env, error::Error, time::Duration};
 
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
-use log::{error, warn, debug};
+use log::{debug, error, warn};
 use r2d2_sqlite::rusqlite::params;
 use tokio::{
     sync::mpsc::{self, UnboundedSender},
@@ -56,6 +56,13 @@ pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSend
     });
 }
 
+async fn do_heartbeat() {
+    if let Ok(heartbeat_url) = env::var("HEARTBEAT_URL") {
+        reqwest::get(&heartbeat_url).await.unwrap();
+        debug!("Heartbeat url {heartbeat_url} called");
+    }
+}
+
 fn fetched(
     database: Database,
     disruptions: Vec<Disruption>,
@@ -97,5 +104,6 @@ fn fetched(
         }
     }
     debug!("{changes} disruptions found/changed");
+    tokio::spawn(do_heartbeat());
     Ok(())
 }
