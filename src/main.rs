@@ -11,6 +11,7 @@ mod database;
 mod fetcher;
 mod filter;
 mod format;
+mod user;
 
 #[tokio::main]
 async fn main() {

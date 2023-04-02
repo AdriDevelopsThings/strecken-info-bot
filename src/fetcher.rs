@@ -15,6 +15,7 @@ use crate::{
     database::Database,
     filter::Filter,
     format::{disruption_to_string, hash_disruption},
+    user::User,
 };
 
 pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSender<(i64, String)>) {
@@ -74,10 +75,10 @@ fn fetched(
         Filter::Planned,
         Filter::TooLongDisruption { days: 7 },
     ];
-    let mut statement = connection.prepare("SELECT chat_id FROM user")?;
+    let mut statement = connection.prepare("SELECT id, chat_id, trigger_warning_list FROM user")?;
     let users = statement
-        .query_map([], |row| row.get(0))?
-        .collect::<Result<Vec<i64>, r2d2_sqlite::rusqlite::Error>>()?;
+        .query_map([], User::from_row)?
+        .collect::<Result<Vec<User>, r2d2_sqlite::rusqlite::Error>>()?;
 
     let mut changes = 0;
     for disruption in disruptions {
@@ -97,7 +98,12 @@ fn fetched(
                 let message = disruption_to_string(&disruption, changed);
                 // Send this disruption to users
                 for user in &users {
-                    telegram_message_sender.send((*user, message.clone()))?;
+                    let message = if let Some(trigger) = user.is_trigger(&message) {
+                        format!("TW: {trigger}\n<span class=\"tg-spoiler\">{message}</span>")
+                    } else {
+                        message.clone()
+                    };
+                    telegram_message_sender.send((user.chat_id, message))?;
                 }
             }
             connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash])?;
