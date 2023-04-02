@@ -135,9 +135,8 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
         false => "",
     };
     format!(
-        "{prefix}<i><u>Ort: {location}</u></i>\n<b>{}</b>\n\n{times}\n\n{}\nPriorität: {}",
+        "{prefix}<i><u>Ort: {location}</u></i>\n<b>{}</b>\n\n{times}\n\n{}",
         encode_text(&head),
-        encode_text(&text),
-        disruption.prio
+        encode_text(&text)
     )
 }
