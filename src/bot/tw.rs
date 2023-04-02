@@ -58,6 +58,7 @@ async fn tw(context: Context, message: Message) -> CommandResult {
     let mut trigger_warnings = trigger_warnings
         .split(',')
         .map(|s| s.to_owned())
+        .filter(|s| !s.is_empty())
         .collect::<Vec<String>>();
 
     if args.len() == 1 {
