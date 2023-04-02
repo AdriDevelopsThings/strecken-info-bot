@@ -1,7 +1,7 @@
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
 use html_escape::encode_text;
-use strecken_info::Disruption;
+use strecken_info::{Disruption, Product};
 
 pub fn hash_disruption(disruption: &Disruption) -> String {
     let mut input = String::new();
@@ -95,7 +95,26 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
         .map(|impact| impact.impact.clone())
         .collect::<Vec<String>>();
     impacts.dedup();
-    let head = impacts.join(", ") + "\n" + disruption.head.as_str();
+
+    let mut product_impacts = disruption
+        .impact
+        .clone()
+        .unwrap_or_default()
+        .iter()
+        .map(|impact| match impact.product {
+            Product::LongDistance => "SPFV",
+            Product::Local => "SPNV",
+            Product::Freight => "SPGV",
+        })
+        .collect::<Vec<&str>>();
+    product_impacts.dedup();
+
+    let head = impacts.join(", ")
+        + " ("
+        + product_impacts.join(", ").as_str()
+        + ")"
+        + "\n"
+        + disruption.head.as_str();
     let mut events = disruption
         .events
         .iter()
