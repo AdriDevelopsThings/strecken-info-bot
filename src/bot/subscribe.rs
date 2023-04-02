@@ -1,8 +1,18 @@
 use log::info;
-use r2d2_sqlite::rusqlite::params;
+use r2d2::PooledConnection;
+use r2d2_sqlite::{rusqlite::params, SqliteConnectionManager};
 use telexide::{api::types::SendMessage, prelude::*};
 
 use super::HashMapDatabase;
+
+pub fn subscribe_user(connection: &PooledConnection<SqliteConnectionManager>, chat_id: i64) {
+    connection
+        .execute(
+            "INSERT INTO user(chat_id) VALUES(?) ON CONFLICT(chat_id) DO NOTHING",
+            params![chat_id],
+        )
+        .unwrap();
+}
 
 #[command(description = "Start this bot by subscribing")]
 async fn start(context: Context, message: Message) -> CommandResult {
@@ -13,12 +23,7 @@ async fn start(context: Context, message: Message) -> CommandResult {
         .unwrap()
         .clone();
     let connection = database.get_connection().unwrap();
-    connection
-        .execute(
-            "INSERT INTO user(chat_id) VALUES(?) ON CONFLICT(chat_id) DO NOTHING",
-            params![message.chat.get_id()],
-        )
-        .unwrap();
+    subscribe_user(&connection, message.chat.get_id());
     info!(
         "New user {} subscribed",
         message

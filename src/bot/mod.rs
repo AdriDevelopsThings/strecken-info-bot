@@ -7,11 +7,13 @@ use typemap_rev::TypeMapKey;
 
 use info::*;
 use subscribe::*;
+use tw::*;
 
 use crate::database::Database;
 
 mod info;
 mod subscribe;
+mod tw;
 
 struct HashMapDatabase;
 impl TypeMapKey for HashMapDatabase {
@@ -32,7 +34,8 @@ pub async fn run_bot(
             unsubscribe,
             version,
             git,
-            feedback
+            feedback,
+            tw
         ))
         .build();
     let api_client = client.api_client.clone();
