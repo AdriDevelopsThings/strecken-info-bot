@@ -104,7 +104,7 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
         .map(|impact| match impact.product {
             Product::LongDistance => "SPFV",
             Product::Local => "SPNV",
-            Product::Freight => "SPGV",
+            Product::Freight => "SGV",
         })
         .collect::<Vec<&str>>();
     product_impacts.dedup();
