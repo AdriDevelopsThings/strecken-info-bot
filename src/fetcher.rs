@@ -70,11 +70,7 @@ fn fetched(
     telegram_message_sender: UnboundedSender<(i64, String)>,
 ) -> Result<(), Box<dyn Error>> {
     let connection = database.get_connection()?;
-    let filters = vec![
-        Filter::Prio { min: 30 },
-        Filter::Planned,
-        Filter::TooLongDisruption { days: 7 },
-    ];
+    let filters = vec![Filter::Planned, Filter::TooLongDisruption { days: 7 }];
     let mut statement = connection.prepare("SELECT id, chat_id, trigger_warning_list FROM user")?;
     let users = statement
         .query_map([], User::from_row)?
