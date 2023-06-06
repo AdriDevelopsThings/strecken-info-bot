@@ -115,13 +115,24 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
         + ")"
         + "\n"
         + disruption.head.as_str();
+
+    let end = disruption
+        .end_date
+        .and_time(disruption.end_time)
+        .and_local_timezone(Berlin)
+        .unwrap();
+
     let mut events = disruption
         .events
         .iter()
         .map(|event| {
             format!(
-                "{} bis vsl. {}",
+                "{} bis {}{}",
                 event.start_time.format("%d.%m.%Y %H:%M"),
+                match end > Utc::now() {
+                    true => "vsl. ",
+                    false => ""
+                },
                 event.end_time.format("%d.%m.%Y %H:%M")
             )
         })
@@ -136,12 +147,6 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
         .replace("<br/>", "\n")
         .replace("<br>", "\n")
         .replace("<br />", "\n");
-
-    let end = disruption
-        .end_date
-        .and_time(disruption.end_time)
-        .and_local_timezone(Berlin)
-        .unwrap();
 
     let prefix = match changed {
         true => {
