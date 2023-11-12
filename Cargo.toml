@@ -28,7 +28,7 @@ r2d2 = { version = "0.8.10", default-features = false }
 r2d2_sqlite = { version = "0.21.0", default-features = false, features = ["bundled"] }
 reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"] }
 strecken-info = { version = "0.1", default-features = false, features = ["rustls-tls"] }
-telexide = { git = "https://github.com/AdriDevelopsThings/telexide", branch = "fix/get-chat" }
+telexide = { git = "https://github.com/AdriDevelopsThings/telexide", branch = "fix/public-telegram-error" }
 tokio = { version = "1.26", features = ["full"] }
 typemap_rev = "0.3.0"
 
