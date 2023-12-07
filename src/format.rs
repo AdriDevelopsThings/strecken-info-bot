@@ -131,7 +131,7 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
                 event.start_time.format("%d.%m.%Y %H:%M"),
                 match end > Utc::now() {
                     true => "vsl. ",
-                    false => ""
+                    false => "",
                 },
                 event.end_time.format("%d.%m.%Y %H:%M")
             )
