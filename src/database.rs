@@ -57,6 +57,18 @@ impl Database {
                 .unwrap();
             connection.pragma_update(None, "user_version", 2).unwrap();
         }
+
+        if user_version <= 2 {
+            // add show_planned_disruptions column to user
+            connection
+                .execute(
+                    "ALTER TABLE user
+                    ADD show_planned_disruptions INTEGER DEFAULT 0 NOT NULL;",
+                    params![],
+                )
+                .unwrap();
+            connection.pragma_update(None, "user_version", 3).unwrap();
+        }
         Ok(())
     }
 }

@@ -4,6 +4,7 @@ pub struct User {
     pub id: i32,
     pub chat_id: i64,
     pub trigger_warnings: Vec<String>,
+    pub show_planned_disruptions: bool,
 }
 
 impl User {
@@ -17,6 +18,7 @@ impl User {
                 .map(|s| s.to_owned())
                 .filter(|s| !s.is_empty())
                 .collect(),
+            show_planned_disruptions: value.get(3)?,
         })
     }
 

@@ -9,12 +9,14 @@ use tokio::sync::mpsc::UnboundedReceiver;
 use typemap_rev::TypeMapKey;
 
 use info::*;
+use planned::*;
 use subscribe::*;
 use tw::*;
 
 use crate::database::Database;
 
 mod info;
+mod planned;
 mod subscribe;
 mod tw;
 
@@ -35,7 +37,8 @@ pub fn create_client() -> Client {
             version,
             git,
             feedback,
-            tw
+            tw,
+            planned
         ))
         .build()
 }

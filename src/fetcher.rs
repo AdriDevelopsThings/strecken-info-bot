@@ -13,7 +13,7 @@ use strecken_info::{geo_pos::request_disruptions, Disruption};
 
 use crate::{
     database::Database,
-    filter::Filter,
+    filter::{DisruptionFilter, UserFilter},
     format::{disruption_to_string, hash_disruption},
     user::User,
 };
@@ -33,7 +33,7 @@ pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSend
             interval.tick().await;
             let now = Utc::now();
             let now = now.with_timezone(&Berlin).naive_local();
-            let disruptions = match request_disruptions(now, now, 5000, 100, None).await {
+            let mut disruptions = match request_disruptions(now, now, 5000, 100, None).await {
                 Ok(s) => s,
                 Err(e) => {
                     error!(
@@ -43,6 +43,11 @@ pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSend
                     continue;
                 }
             };
+            // handle not planned disruptions first because the api could run into TooManyRequest errors
+            disruptions.sort_by(|a, _| match a.planned {
+                true => std::cmp::Ordering::Greater,
+                false => std::cmp::Ordering::Less,
+            });
             debug!("Fetched new disruptions");
             tx.send(disruptions).unwrap();
         }
@@ -70,8 +75,10 @@ fn fetched(
     telegram_message_sender: UnboundedSender<(i64, String)>,
 ) -> Result<(), Box<dyn Error>> {
     let connection = database.get_connection()?;
-    let filters = vec![Filter::Planned, Filter::TooLongDisruption { days: 7 }];
-    let mut statement = connection.prepare("SELECT id, chat_id, trigger_warning_list FROM user")?;
+    let filters = vec![DisruptionFilter::TooLongDisruption { days: 7 }];
+    let user_filters = vec![UserFilter::Planned];
+    let mut statement = connection
+        .prepare("SELECT id, chat_id, trigger_warning_list, show_planned_disruptions FROM user")?;
     let users = statement
         .query_map([], User::from_row)?
         .collect::<Result<Vec<User>, r2d2_sqlite::rusqlite::Error>>()?;
@@ -90,10 +97,13 @@ fn fetched(
         if send {
             changes += 1;
             // Entry changed
-            if Filter::filters(&filters, &disruption) {
+            if DisruptionFilter::filters(&filters, &disruption) {
                 let message = disruption_to_string(&disruption, changed);
                 // Send this disruption to users
                 for user in &users {
+                    if !UserFilter::filters(&user_filters, &disruption, user) {
+                        continue;
+                    }
                     let message = if let Some(trigger) = user.is_trigger(&message) {
                         format!("TW: {trigger}\n<span class=\"tg-spoiler\">{message}</span>")
                     } else {

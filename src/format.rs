@@ -5,6 +5,11 @@ use strecken_info::{Disruption, Product};
 
 pub fn hash_disruption(disruption: &Disruption) -> String {
     let mut input = String::new();
+    input += "p:";
+    input += match disruption.planned {
+        true => "1",
+        false => "0",
+    };
     input += "l:";
     input += disruption
         .locations
@@ -109,12 +114,22 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
         .collect::<Vec<&str>>();
     product_impacts.dedup();
 
-    let head = impacts.join(", ")
-        + " ("
-        + product_impacts.join(", ").as_str()
-        + ")"
-        + "\n"
-        + disruption.head.as_str();
+    let planned = match disruption.planned {
+        true => " (Geplant)",
+        false => "",
+    };
+
+    let mut head = impacts.join(", ");
+    if !product_impacts.is_empty() {
+        head += " (";
+        head += product_impacts.join(", ").as_str();
+        head += ")";
+    }
+    if !head.is_empty() {
+        head += "\n";
+    }
+    head += &disruption.head;
+    head += planned;
 
     let end = disruption
         .end_date
