@@ -1,3 +1,4 @@
+use log::info;
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::{rusqlite::params, SqliteConnectionManager};
 
@@ -23,6 +24,7 @@ impl Database {
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .unwrap();
         if user_version <= 0 {
+            info!("Running database migration 0");
             connection
                 .execute(
                     "CREATE TABLE IF NOT EXISTS user (
@@ -48,6 +50,7 @@ impl Database {
 
         if user_version <= 1 {
             // add trigger_warning_list column to user
+            info!("Running database migration 1");
             connection
                 .execute(
                     "ALTER TABLE user
@@ -60,6 +63,7 @@ impl Database {
 
         if user_version <= 2 {
             // add show_planned_disruptions column to user
+            info!("Running database migration 2");
             connection
                 .execute(
                     "ALTER TABLE user
