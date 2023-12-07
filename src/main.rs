@@ -2,6 +2,7 @@ use std::env;
 
 use bot::run_bot;
 use dotenv::dotenv;
+use env_logger::Env;
 use tokio::sync::mpsc;
 
 use crate::{database::Database, fetcher::start_fetching};
@@ -15,9 +16,7 @@ mod user;
 
 #[tokio::main]
 async fn main() {
-    env_logger::Builder::new()
-        .filter(None, log::LevelFilter::Info)
-        .init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     dotenv().ok();
     let database = Database::new(
         &env::var("SQLITE_PATH").expect("No SQLITE_PATH environment variable supplied"),
