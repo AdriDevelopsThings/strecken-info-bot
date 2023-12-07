@@ -6,13 +6,9 @@ use std::{
     io::{self, Write},
     process,
 };
+use strecken_info_telegram::{create_client, Database};
 
-use bot::create_client;
-use database::Database;
 use telexide::{api::types::GetChat, model::Chat};
-
-mod bot;
-mod database;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

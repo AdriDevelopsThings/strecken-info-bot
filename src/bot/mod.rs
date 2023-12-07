@@ -1,10 +1,6 @@
 use std::env;
 
-use log::error;
-use r2d2_sqlite::rusqlite::params;
-use telexide::{
-    api::types::SendMessage, create_framework, prelude::ClientBuilder, Client, Error, TelegramError,
-};
+use telexide::{create_framework, prelude::ClientBuilder, Client};
 use tokio::sync::mpsc::UnboundedReceiver;
 use typemap_rev::TypeMapKey;
 
@@ -13,9 +9,10 @@ use planned::*;
 use subscribe::*;
 use tw::*;
 
-use crate::database::Database;
+use crate::{bot::message_sender::MessageSender, database::Database};
 
 mod info;
+mod message_sender;
 mod planned;
 mod subscribe;
 mod tw;
@@ -45,7 +42,7 @@ pub fn create_client() -> Client {
 
 pub async fn run_bot(
     database: Database,
-    mut receiver: UnboundedReceiver<(i64, String)>,
+    receiver: UnboundedReceiver<(i64, String)>,
 ) -> telexide::Result<()> {
     let client = create_client();
     let api_client = client.api_client.clone();
@@ -54,27 +51,9 @@ pub async fn run_bot(
         let mut data = client.data.write();
         data.insert::<HashMapDatabase>(database.clone());
     }
-
+    let message_sender = MessageSender::new(api_client, database);
     tokio::spawn(async move {
-        while let Some((chat_id, message)) = receiver.recv().await {
-            let mut message = SendMessage::new(chat_id.into(), message);
-            message.set_parse_mode(telexide::model::ParseMode::HTML);
-            if let Err(e) = api_client.send_message(message).await {
-                if let Error::Telegram(TelegramError::APIResponseError(api_response)) = e {
-                    if api_response == "Forbidden: bot was blocked by the user" {
-                        database
-                            .get_connection()
-                            .unwrap()
-                            .execute("DELETE FROM user WHERE chat_id=?", params![chat_id])
-                            .unwrap();
-                    } else {
-                        error!("Api error while sending message to telegram: ${api_response}");
-                    }
-                } else {
-                    error!("Error while sending message to telegram: {e}");
-                }
-            }
-        }
+        message_sender.start_polling(receiver).await;
     });
 
     println!("Telegram bot started");

@@ -1,18 +1,9 @@
 use std::env;
 
-use bot::run_bot;
 use dotenv::dotenv;
 use env_logger::Env;
+use strecken_info_telegram::{run_bot, start_fetching, Database};
 use tokio::sync::mpsc;
-
-use crate::{database::Database, fetcher::start_fetching};
-
-mod bot;
-mod database;
-mod fetcher;
-mod filter;
-mod format;
-mod user;
 
 #[tokio::main]
 async fn main() {
