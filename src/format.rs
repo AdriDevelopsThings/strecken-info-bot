@@ -1,6 +1,7 @@
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
 use html_escape::encode_text;
+use regex::Regex;
 use strecken_info::{Disruption, Product};
 
 pub fn hash_disruption(disruption: &Disruption) -> String {
@@ -61,6 +62,11 @@ pub fn hash_disruption(disruption: &Disruption) -> String {
     input += disruption.text.clone().unwrap_or_default().as_str();
 
     format!("{:x}", md5::compute(input.as_bytes()))
+}
+
+fn format_text(text: &str) -> String {
+    let text_regex = Regex::new("<br */?>").unwrap();
+    text_regex.replace_all(text, "\n").to_string()
 }
 
 pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
@@ -155,13 +161,7 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
     events.dedup();
     let times = events.join("\n");
 
-    let text = disruption
-        .text
-        .clone()
-        .unwrap_or_default()
-        .replace("<br/>", "\n")
-        .replace("<br>", "\n")
-        .replace("<br />", "\n");
+    let text = disruption.text.clone().unwrap_or_default();
 
     let prefix = match changed {
         true => {
@@ -175,7 +175,7 @@ pub fn disruption_to_string(disruption: &Disruption, changed: bool) -> String {
     };
     format!(
         "{prefix}<i><u>Ort: {location}</u></i>\n<b>{}</b>\n\n{times}\n\n{}",
-        encode_text(&head),
-        encode_text(&text)
+        encode_text(&format_text(&head)),
+        encode_text(&format_text(&text))
     )
 }
