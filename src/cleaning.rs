@@ -13,7 +13,7 @@ pub fn start_cleaning(database: Database) {
                 let connection = database.get_connection().unwrap();
                 let affected = connection
                     .execute(
-                        "DELETE FROM disruption WHERE end_time < date('now, '- 2 day')",
+                        "DELETE FROM disruption WHERE end_time < date('now', '-2 day')",
                         params![],
                     )
                     .unwrap();

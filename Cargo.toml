@@ -16,8 +16,8 @@ name = "cli"
 path = "src/cli.rs"
 
 [dependencies]
-chrono = "0.4.24"
-chrono-tz = "0.8.1"
+chrono = "0.4.31"
+chrono-tz = "0.8.4"
 clap = { version = "4.1.11", features = ["derive"] }
 dotenv = "0.15.0"
 env_logger = "0.10.0"
