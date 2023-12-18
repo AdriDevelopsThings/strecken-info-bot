@@ -11,10 +11,6 @@ default-run = "strecken-info-telegram"
 name = "strecken-info-telegram"
 path = "src/main.rs"
 
-[[bin]]
-name = "cli"
-path = "src/cli.rs"
-
 [dependencies]
 chrono = "0.4.31"
 chrono-tz = "0.8.4"
