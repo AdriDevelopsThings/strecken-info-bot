@@ -11,7 +11,12 @@ default-run = "strecken-info-telegram"
 name = "strecken-info-telegram"
 path = "src/main.rs"
 
+[features]
+default = ["metrics"]
+metrics = ["dep:axum"]
+
 [dependencies]
+axum = { version = "0.7.2", optional = true, default-features = false, features = ["http1", "tokio", "tower-log"]}
 chrono = "0.4.31"
 chrono-tz = "0.8.4"
 clap = { version = "4.1.11", features = ["derive"] }

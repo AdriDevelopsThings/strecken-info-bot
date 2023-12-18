@@ -20,4 +20,7 @@ COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENV SQLITE_PATH=/database/db.sql
 VOLUME [ "/database" ]
 
+ENV METRICS_LISTEN_ADDRESS=0.0.0.0:80
+EXPOSE 80
+
 CMD ["/app/bin/strecken-info-telegram"]

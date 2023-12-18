@@ -3,6 +3,8 @@ use std::env;
 use clap::Parser;
 use dotenv::dotenv;
 use env_logger::Env;
+#[cfg(feature = "metrics")]
+use strecken_info_telegram::start_server;
 use strecken_info_telegram::{
     reset_disruptions, run_bot, show_users, start_cleaning, start_fetching, Database,
 };
@@ -38,6 +40,8 @@ async fn main() {
 
         start_fetching(database.clone(), telegram_message_sender);
         start_cleaning(database.clone());
+        #[cfg(feature = "metrics")]
+        start_server(database.clone()).await;
         run_bot(database, telegram_message_receiver).await.unwrap();
     }
 }
