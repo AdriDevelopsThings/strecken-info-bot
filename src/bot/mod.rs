@@ -1,5 +1,6 @@
 use std::env;
 
+use log::info;
 use telexide::{create_framework, prelude::ClientBuilder, Client};
 use tokio::sync::mpsc::UnboundedReceiver;
 use typemap_rev::TypeMapKey;
@@ -56,6 +57,6 @@ pub async fn run_bot(
         message_sender.start_polling(receiver).await;
     });
 
-    println!("Telegram bot started");
+    info!("Telegram bot started");
     client.start().await
 }
