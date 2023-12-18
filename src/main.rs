@@ -2,7 +2,7 @@ use std::env;
 
 use dotenv::dotenv;
 use env_logger::Env;
-use strecken_info_telegram::{run_bot, start_fetching, Database};
+use strecken_info_telegram::{run_bot, start_cleaning, start_fetching, Database};
 use tokio::sync::mpsc;
 
 #[tokio::main]
@@ -19,5 +19,6 @@ async fn main() {
         mpsc::unbounded_channel::<(i64, String)>();
 
     start_fetching(database.clone(), telegram_message_sender);
+    start_cleaning(database.clone());
     run_bot(database, telegram_message_receiver).await.unwrap();
 }
