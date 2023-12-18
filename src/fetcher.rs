@@ -112,7 +112,24 @@ fn fetched(
                     telegram_message_sender.send((user.chat_id, message))?;
                 }
             }
-            connection.execute("INSERT INTO disruption(him_id, hash) VALUES(?, ?) ON CONFLICT(him_id) DO UPDATE SET hash=excluded.hash", params![&disruption.id, hash])?;
+            let start_time_sql = disruption
+                .start_date
+                .and_time(disruption.start_time)
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string();
+            let end_time_sql = disruption
+                .end_date
+                .and_time(disruption.end_time)
+                .format("%Y-%m-%d %H:%M:%S")
+                .to_string();
+            connection.execute(
+                "INSERT INTO disruption(him_id, hash, start_time, end_time) VALUES(?, ?, ?, ?)
+                ON CONFLICT(him_id) DO UPDATE
+                SET hash=excluded.hash,
+                    start_time=excluded.start_time,
+                    end_time=excluded.end_time",
+                params![&disruption.id, hash, start_time_sql, end_time_sql],
+            )?;
         }
     }
     debug!("{changes} disruptions found/changed");

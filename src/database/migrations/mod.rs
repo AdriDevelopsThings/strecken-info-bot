@@ -5,6 +5,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 mod migration_1;
 mod migration_2;
 mod migration_3;
+mod migration_4;
 
 type MigrationFunction = fn(&PooledConnection<SqliteConnectionManager>);
 
@@ -12,6 +13,7 @@ static MIGRATIONS: &[(i32, MigrationFunction)] = &[
     (1, migration_1::migrate),
     (2, migration_2::migrate),
     (3, migration_3::migrate),
+    (4, migration_4::migrate),
 ];
 
 fn run_migration(
