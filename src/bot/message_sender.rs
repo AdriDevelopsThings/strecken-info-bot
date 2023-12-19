@@ -34,14 +34,16 @@ impl MessageSender {
         message.set_parse_mode(telexide::model::ParseMode::HTML);
         if let Err(e) = self.api_client.send_message(message).await {
             if let Error::Telegram(TelegramError::APIResponseError(api_response)) = e {
-                if api_response == "Forbidden: bot was blocked by the user" {
+                if api_response == "Forbidden: bot was blocked by the user"
+                    || api_response == "Forbidden: user is deactivated"
+                {
                     self.database
                         .get_connection()
                         .unwrap()
                         .execute("DELETE FROM user WHERE chat_id=?", params![chat_id])
                         .unwrap();
                 } else {
-                    error!("Api error while sending message to telegram: ${api_response}");
+                    error!("Api error while sending message to telegram: {api_response}");
                 }
             } else {
                 error!("Error while sending message to telegram: {e}");
