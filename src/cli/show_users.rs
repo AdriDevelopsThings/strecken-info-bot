@@ -1,6 +1,3 @@
-use r2d2_sqlite::rusqlite::params;
-use std::io::{self, Write};
-
 use telexide::{api::types::GetChat, model::Chat};
 
 use crate::{create_client, Database};
@@ -42,22 +39,5 @@ pub async fn show_users(database: Database) {
                 chat.username.unwrap_or_default()
             ),
         }
-    }
-}
-
-pub async fn reset_disruptions(database: Database) {
-    let connection = database.get_connection().unwrap();
-    print!("Are you sure to delete all saved disruptions? Many new updates will be sent after this? [y/n] ");
-    io::stdout().flush().unwrap();
-    let mut user_input = String::new();
-    let stdin = io::stdin();
-    stdin.read_line(&mut user_input).unwrap();
-    if user_input == "y\n" {
-        connection
-            .execute("DELETE FROM disruption", params![])
-            .unwrap();
-        println!("All saved disruptions removed");
-    } else {
-        println!("Aborted");
     }
 }
