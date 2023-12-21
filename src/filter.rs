@@ -4,6 +4,7 @@ use crate::user::User;
 
 pub enum DisruptionFilter {
     TooLongDisruption { days: u8 },
+    NotPlanned,
 }
 
 impl DisruptionFilter {
@@ -12,6 +13,7 @@ impl DisruptionFilter {
             Self::TooLongDisruption { days } => {
                 (disruption.end_date - disruption.start_date).num_days() < *days as i64
             }
+            Self::NotPlanned => !disruption.planned,
         }
     }
 

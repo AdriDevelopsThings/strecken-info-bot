@@ -14,11 +14,18 @@ use strecken_info::{geo_pos::request_disruptions, Disruption};
 use crate::{
     database::Database,
     filter::{DisruptionFilter, UserFilter},
-    format::{disruption_to_string, hash_disruption},
+    format::{format_hash, format_telegram},
     user::User,
 };
 
-pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSender<(i64, String)>) {
+#[cfg(feature = "mastodon")]
+use crate::format::format_mastodon;
+
+pub fn start_fetching(
+    database: Database,
+    telegram_message_sender: UnboundedSender<(i64, String)>,
+    mastodon_message_sender: Option<UnboundedSender<(i64, String)>>,
+) {
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<Disruption>>();
     tokio::spawn(async move {
         let fetch_every: u64 = env::var("FETCH_EVERY_SECONDS")
@@ -55,7 +62,12 @@ pub fn start_fetching(database: Database, telegram_message_sender: UnboundedSend
 
     tokio::spawn(async move {
         while let Some(s) = rx.recv().await {
-            if let Err(e) = fetched(database.clone(), s, telegram_message_sender.clone()) {
+            if let Err(e) = fetched(
+                database.clone(),
+                s,
+                telegram_message_sender.clone(),
+                mastodon_message_sender.clone(),
+            ) {
                 error!("Error while handling new fetch: {e}");
             }
         }
@@ -73,9 +85,15 @@ fn fetched(
     database: Database,
     disruptions: Vec<Disruption>,
     telegram_message_sender: UnboundedSender<(i64, String)>,
+    mastodon_message_sender: Option<UnboundedSender<(i64, String)>>,
 ) -> Result<(), Box<dyn Error>> {
     let connection = database.get_connection()?;
     let filters = vec![DisruptionFilter::TooLongDisruption { days: 7 }];
+    #[cfg(feature = "mastodon")]
+    let mastodon_filters = vec![
+        DisruptionFilter::TooLongDisruption { days: 7 },
+        DisruptionFilter::NotPlanned,
+    ];
     let user_filters = vec![UserFilter::Planned];
     let mut statement = connection
         .prepare("SELECT id, chat_id, trigger_warning_list, show_planned_disruptions FROM user")?;
@@ -85,20 +103,21 @@ fn fetched(
 
     let mut changes = 0;
     for disruption in disruptions {
-        let hash = hash_disruption(&disruption);
-        let (send, changed) = match connection.query_row(
-            "SELECT hash FROM disruption WHERE him_id=?",
+        let hash = format_hash(&disruption);
+        let db_disruption = connection.query_row(
+            "SELECT id, hash FROM disruption WHERE him_id=?",
             params![&disruption.id],
-            |row| row.get::<usize, String>(0),
-        ) {
-            Ok(db_hash) => (hash != db_hash, true),
-            Err(_) => (true, false),
+            |row| Ok((row.get::<usize, i64>(0)?, row.get::<usize, String>(1)?)),
+        );
+        let (send, changed, disruption_id) = match db_disruption {
+            Ok((disruption_id, db_hash)) => (hash != db_hash, true, Some(disruption_id)),
+            Err(_) => (true, false, None),
         };
         if send {
             changes += 1;
             // Entry changed
             if DisruptionFilter::filters(&filters, &disruption) {
-                let message = disruption_to_string(&disruption, changed);
+                let message = format_telegram(&disruption, changed);
                 // Send this disruption to users
                 for user in &users {
                     if !UserFilter::filters(&user_filters, &disruption, user) {
@@ -130,6 +149,17 @@ fn fetched(
                     end_time=excluded.end_time",
                 params![&disruption.id, hash, start_time_sql, end_time_sql],
             )?;
+            #[cfg(feature = "mastodon")]
+            {
+                if let Some(ref mastodon_message_sender) = mastodon_message_sender {
+                    if DisruptionFilter::filters(&mastodon_filters, &disruption) {
+                        let disruption_id =
+                            disruption_id.unwrap_or_else(|| connection.last_insert_rowid());
+                        mastodon_message_sender
+                            .send((disruption_id, format_mastodon(&disruption, changed)))?;
+                    }
+                }
+            }
         }
     }
     debug!("{changes} disruptions found/changed");

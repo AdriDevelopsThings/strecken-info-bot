@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use log::error;
+use log::{error, info};
 use r2d2_sqlite::rusqlite::params;
 use telexide::{
     api::{types::SendMessage, API},
@@ -52,6 +52,7 @@ impl MessageSender {
     }
 
     pub async fn start_polling(&self, mut receiver: UnboundedReceiver<(i64, String)>) {
+        info!("Telegram sender is ready");
         while let Some(message) = receiver.recv().await {
             let cloned_self = self.clone();
             tokio::spawn(async move {
