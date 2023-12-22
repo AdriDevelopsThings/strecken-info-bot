@@ -11,7 +11,7 @@ pub fn format(disruption: &Disruption, changed: bool) -> String {
     let impacts = get_impacts(disruption).join("\n");
     let end = get_end(disruption);
     let prefix = if Utc::now() > end {
-        "Beendet: "
+        "✅ Beendet: "
     } else {
         match changed {
             true => "Update: ",
