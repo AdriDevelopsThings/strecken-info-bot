@@ -1823,7 +1823,7 @@ dependencies = [
 [[package]]
 name = "telexide"
 version = "0.1.17"
-source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fix/public-telegram-error#51e7951ed7c2a3dd48ca0cfc7f015d8d2517c677"
+source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fixes#2b67f462d810071bc0ef6d50e44c4a9f9622ae80"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1845,7 +1845,7 @@ dependencies = [
 [[package]]
 name = "telexide_proc_macros"
 version = "0.1.2"
-source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fix/public-telegram-error#51e7951ed7c2a3dd48ca0cfc7f015d8d2517c677"
+source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fixes#2b67f462d810071bc0ef6d50e44c4a9f9622ae80"
 dependencies = [
  "proc-macro2",
  "quote",
