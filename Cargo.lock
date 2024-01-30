@@ -1811,7 +1811,7 @@ dependencies = [
 [[package]]
 name = "telexide"
 version = "0.1.17"
-source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fixes#2b67f462d810071bc0ef6d50e44c4a9f9622ae80"
+source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fixes#bd32e9be1a5471e0bfac64752902370a6f4881b9"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1833,7 +1833,7 @@ dependencies = [
 [[package]]
 name = "telexide_proc_macros"
 version = "0.1.2"
-source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fixes#2b67f462d810071bc0ef6d50e44c4a9f9622ae80"
+source = "git+https://github.com/AdriDevelopsThings/telexide?branch=fixes#bd32e9be1a5471e0bfac64752902370a6f4881b9"
 dependencies = [
  "proc-macro2",
  "quote",
