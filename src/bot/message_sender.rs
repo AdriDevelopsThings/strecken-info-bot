@@ -36,6 +36,7 @@ impl MessageSender {
             if let Error::Telegram(TelegramError::APIResponseError(api_response)) = e {
                 if api_response == "Forbidden: bot was blocked by the user"
                     || api_response == "Forbidden: user is deactivated"
+                    || api_response == "Forbidden: bot was kicked from the supergroup chat"
                 {
                     self.database
                         .get_connection()
