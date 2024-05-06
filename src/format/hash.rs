@@ -1,6 +1,6 @@
 use strecken_info::Disruption;
 
-pub fn format(disruption: &Disruption) -> String {
+pub fn format_hash(disruption: &Disruption) -> String {
     let mut input = String::new();
     input += "p:";
     input += match disruption.planned {

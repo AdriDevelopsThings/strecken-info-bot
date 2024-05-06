@@ -1,9 +1,13 @@
+use std::env;
+
 use telexide::{api::types::GetChat, model::Chat};
 
-use crate::{create_client, Database};
+use crate::{components::telegram::create_client, Database};
 
 pub async fn show_users(database: Database) {
-    let client = create_client();
+    let client = create_client(
+        env::var("TELEGRAM_BOT_TOKEN").expect("Environment variable 'TELEGRAM_BOT_TOKEN' not set"),
+    );
     let connection = database.get_connection().unwrap();
     let mut statement = connection.prepare("SELECT chat_id FROM user").unwrap();
     let users = statement

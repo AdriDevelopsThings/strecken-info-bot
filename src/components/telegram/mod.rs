@@ -1,8 +1,5 @@
-use std::env;
-
-use log::info;
 use telexide::{create_framework, prelude::ClientBuilder, Client};
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use typemap_rev::TypeMapKey;
 
 use info::*;
@@ -10,24 +7,29 @@ use planned::*;
 use subscribe::*;
 use tw::*;
 
-use crate::{bot::message_sender::MessageSender, database::Database};
+use crate::Database;
 
+use self::message_sender::MessageSender;
+
+use super::DisruptionInformation;
+
+mod format;
 mod info;
 mod message_sender;
 mod planned;
 mod subscribe;
 mod tw;
+mod user;
+mod user_filter;
 
 struct HashMapDatabase;
 impl TypeMapKey for HashMapDatabase {
     type Value = Database;
 }
 
-pub fn create_client() -> Client {
-    let token = env::var("TELEGRAM_BOT_TOKEN")
-        .expect("No TELEGRAM_BOT_TOKEN environment variable supplied");
+pub fn create_client(bot_token: String) -> Client {
     ClientBuilder::new()
-        .set_token(&token)
+        .set_token(&bot_token)
         .set_framework(create_framework!(
             "strecken-info-bot",
             start,
@@ -43,9 +45,10 @@ pub fn create_client() -> Client {
 
 pub async fn run_bot(
     database: Database,
-    receiver: UnboundedReceiver<(i64, String)>,
-) -> telexide::Result<()> {
-    let client = create_client();
+    receiver: UnboundedReceiver<DisruptionInformation>,
+    bot_token: String,
+) -> [JoinHandle<()>; 2] {
+    let client = create_client(bot_token);
     let api_client = client.api_client.clone();
 
     {
@@ -53,10 +56,18 @@ pub async fn run_bot(
         data.insert::<HashMapDatabase>(database.clone());
     }
     let message_sender = MessageSender::new(api_client, database);
-    tokio::spawn(async move {
-        message_sender.start_polling(receiver).await;
-    });
-
-    info!("Telegram bot started");
-    client.start().await
+    [
+        tokio::spawn(async move {
+            message_sender
+                .start_polling(receiver)
+                .await
+                .expect("Error while running message sender");
+        }),
+        tokio::spawn(async move {
+            client
+                .start()
+                .await
+                .expect("Error while running telegram bot");
+        }),
+    ]
 }

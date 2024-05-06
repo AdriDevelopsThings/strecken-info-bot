@@ -6,9 +6,16 @@ use megalodon::{
     Megalodon,
 };
 use r2d2_sqlite::rusqlite::params;
-use tokio::sync::mpsc::UnboundedReceiver;
+use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 
-use crate::Database;
+use crate::{components::DisruptionInformation, filter::DisruptionFilter, Database};
+
+mod format;
+
+const MASTODON_FILTERS: &[DisruptionFilter] = &[
+    DisruptionFilter::TooLongDisruption { days: 7 },
+    DisruptionFilter::NotPlanned,
+];
 
 fn get_user_agent() -> String {
     format!("strecken-info-telegram/{}", env!("CARGO_PKG_VERSION"))
@@ -25,37 +32,40 @@ fn limit_message(message: String, limit: usize) -> String {
 pub struct MastodonSender {
     client: Box<dyn Megalodon + Send + Sync>,
     database: Database,
-    receiver: UnboundedReceiver<(i64, String)>,
+    receiver: UnboundedReceiver<DisruptionInformation>,
     max_status_characters: u32,
 }
 
 impl MastodonSender {
-    pub fn create_client() -> Option<Box<dyn Megalodon + Send + Sync>> {
-        let mastodon_url = match env::var("MASTODON_URL") {
-            Ok(url) => url,
-            Err(_) => return None,
-        };
-        let mastodon_access_token =
-            env::var("MASTODON_ACCESS_TOKEN").expect("No 'MASTODON_ACCESS_TOKEN' set");
-
-        Some(megalodon::generator(
+    pub fn create_client(
+        mastodon_url: String,
+        mastodon_access_token: String,
+    ) -> Box<dyn Megalodon + Send + Sync> {
+        megalodon::generator(
             megalodon::SNS::Mastodon,
             mastodon_url,
             Some(mastodon_access_token),
             Some(get_user_agent()),
-        ))
+        )
+    }
+
+    pub fn create_client_by_env() -> Box<dyn Megalodon + Send + Sync> {
+        Self::create_client(
+            env::var("MASTODON_URL").expect("Environment variable 'MASTODON_URL' not set"),
+            env::var("MASTODON_ACCESS_TOKEN")
+                .expect("Environment variable 'MASTODON_ACCESS_TOKEN' not set"),
+        )
     }
 
     /// Create a new MastodonSender if mastodon is configured
     /// MastodonSender::new will return None if mastodon isn't configured
     pub async fn new(
         database: Database,
-        receiver: UnboundedReceiver<(i64, String)>,
-    ) -> Option<Self> {
-        let client = match Self::create_client() {
-            Some(client) => client,
-            None => return None,
-        };
+        receiver: UnboundedReceiver<DisruptionInformation>,
+        mastodon_url: String,
+        mastodon_access_token: String,
+    ) -> Self {
+        let client = Self::create_client(mastodon_url, mastodon_access_token);
 
         let mut sender = Self {
             client,
@@ -65,7 +75,7 @@ impl MastodonSender {
         };
         sender.fetch_max_status_characters().await;
 
-        Some(sender)
+        sender
     }
 
     /// This function fetches the instance configuration of the mastodon server and updates the max_characters value
@@ -137,12 +147,18 @@ impl MastodonSender {
     }
 
     /// start the polling on the receiver async
-    pub fn start_polling(mut self) {
+    pub fn start_polling(mut self) -> JoinHandle<()> {
         info!("Mastodon sender is ready");
         tokio::spawn(async move {
-            while let Some((id, message)) = self.receiver.recv().await {
-                self.send_disruption(id, message).await;
+            while let Some(disruption) = self.receiver.recv().await {
+                if DisruptionFilter::filters(MASTODON_FILTERS, &disruption.disruption) {
+                    self.send_disruption(
+                        disruption.disruption_id,
+                        format::format(&disruption.disruption, disruption.changed),
+                    )
+                    .await;
+                }
             }
-        });
+        })
     }
 }

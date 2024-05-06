@@ -3,6 +3,7 @@ use std::io::{self, Write};
 #[cfg(feature = "mastodon")]
 mod clear_toots;
 mod reset_disruptions;
+#[cfg(feature = "telegram")]
 mod show_users;
 
 fn ask_are_u_sure(question: &str) -> bool {
@@ -22,4 +23,5 @@ fn ask_are_u_sure(question: &str) -> bool {
 #[cfg(feature = "mastodon")]
 pub use clear_toots::clear_toots;
 pub use reset_disruptions::reset_disruptions;
+#[cfg(feature = "telegram")]
 pub use show_users::show_users;

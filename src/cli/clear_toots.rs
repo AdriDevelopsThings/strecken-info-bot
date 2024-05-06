@@ -10,7 +10,7 @@ pub async fn clear_toots(database: Database) {
     Please take care of the rate limit so don't use this action to delete a mass of toots") {
         return;
     }
-    let client = MastodonSender::create_client().expect("Mastodon isn't configured");
+    let client = MastodonSender::create_client_by_env();
     let connection = database.get_connection().unwrap();
 
     let me = client
