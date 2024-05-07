@@ -1,24 +1,23 @@
-mod bot;
 mod cleaning;
 mod cli;
+mod components;
 mod database;
 mod fetcher;
 mod filter;
 mod format;
-#[cfg(feature = "mastodon")]
-mod mastodon;
 #[cfg(feature = "metrics")]
 mod metrics;
-mod user;
 
-pub use bot::{create_client, run_bot};
 pub use cleaning::start_cleaning;
 #[cfg(feature = "mastodon")]
 pub use cli::clear_toots;
-pub use cli::{reset_disruptions, show_users};
+pub use cli::reset_disruptions;
+#[cfg(feature = "telegram")]
+pub use cli::show_users;
+#[cfg(feature = "mastodon")]
+pub use components::mastodon::MastodonSender;
+pub use components::Components;
 pub use database::Database;
 pub use fetcher::start_fetching;
-#[cfg(feature = "mastodon")]
-pub use mastodon::MastodonSender;
 #[cfg(feature = "metrics")]
 pub use metrics::start_server;

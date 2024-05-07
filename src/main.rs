@@ -5,14 +5,11 @@ use dotenv::dotenv;
 use env_logger::Env;
 #[cfg(feature = "mastodon")]
 use strecken_info_bot::clear_toots;
+#[cfg(feature = "telegram")]
+use strecken_info_bot::show_users;
 #[cfg(feature = "metrics")]
 use strecken_info_bot::start_server;
-#[cfg(feature = "mastodon")]
-use strecken_info_bot::MastodonSender;
-use strecken_info_bot::{
-    reset_disruptions, run_bot, show_users, start_cleaning, start_fetching, Database,
-};
-use tokio::sync::mpsc::{self, UnboundedSender};
+use strecken_info_bot::{reset_disruptions, start_cleaning, start_fetching, Components, Database};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -42,33 +39,23 @@ async fn main() {
         return;
     }
 
+    #[cfg(feature = "telegram")]
     if args.show_users {
         show_users(database).await;
-    } else if args.reset_disruptions {
+        return;
+    }
+
+    if args.reset_disruptions {
         reset_disruptions(database).await;
     } else {
-        let (telegram_message_sender, telegram_message_receiver) =
-            mpsc::unbounded_channel::<(i64, String)>();
-        let mut mastodon_message_sender: Option<UnboundedSender<(i64, String)>> = None;
-        #[cfg(feature = "mastodon")]
-        {
-            let (mastodon_message_sender_, mastodon_message_receiver) =
-                mpsc::unbounded_channel::<(i64, String)>();
-            let mastodon = MastodonSender::new(database.clone(), mastodon_message_receiver).await;
-            if let Some(mastodon) = mastodon {
-                mastodon_message_sender = Some(mastodon_message_sender_);
-                mastodon.start_polling();
-            }
-        }
+        let (components, tasks) = Components::by_env(database.clone()).await;
 
-        start_fetching(
-            database.clone(),
-            telegram_message_sender,
-            mastodon_message_sender,
-        );
+        start_fetching(database.clone(), components);
+
         start_cleaning(database.clone());
         #[cfg(feature = "metrics")]
         start_server(database.clone()).await;
-        run_bot(database, telegram_message_receiver).await.unwrap();
+
+        futures::future::join_all(tasks).await;
     }
 }

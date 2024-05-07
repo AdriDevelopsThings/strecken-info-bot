@@ -7,7 +7,7 @@ use crate::format::{
     partial_format::{get_end, get_events, get_impacts, get_location, get_product_impacts},
 };
 
-pub fn format(disruption: &Disruption, changed: bool) -> String {
+pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
     let location = get_location(disruption, None);
 
     let impacts = get_impacts(disruption);
