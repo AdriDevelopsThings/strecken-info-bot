@@ -1,6 +1,6 @@
 use std::env;
 
-use log::{info, warn};
+use log::{error, info, warn};
 use strecken_info::Disruption;
 use tokio::{
     sync::mpsc::{unbounded_channel, UnboundedSender},
@@ -88,13 +88,15 @@ impl Components {
         disruption: Disruption,
     ) -> Result<(), String> {
         for channel in &self.channels {
-            channel
-                .send(DisruptionInformation {
-                    disruption_id,
-                    changed,
-                    disruption: disruption.clone(),
-                })
-                .map_err(|e| format!("{e}"))?;
+            if let Err(e) = channel.send(DisruptionInformation {
+                disruption_id,
+                changed,
+                disruption: disruption.clone(),
+            }) {
+                error!(
+                    "Error while sending new disruption information: {e}. Error will be ignored."
+                );
+            };
         }
         Ok(())
     }
