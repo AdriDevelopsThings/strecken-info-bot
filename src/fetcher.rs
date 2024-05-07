@@ -83,11 +83,6 @@ fn fetched(
         if send {
             changes += 1;
             // Entry changed
-            components.push(
-                disruption_id.unwrap_or_else(|| connection.last_insert_rowid()),
-                changed,
-                disruption.clone(),
-            )?;
 
             let start_time_sql = disruption
                 .start_date
@@ -106,6 +101,12 @@ fn fetched(
                     start_time=excluded.start_time,
                     end_time=excluded.end_time",
                 params![&disruption.id, hash, start_time_sql, end_time_sql],
+            )?;
+
+            components.push(
+                disruption_id.unwrap_or_else(|| connection.last_insert_rowid()),
+                changed,
+                disruption.clone(),
             )?;
         }
     }
