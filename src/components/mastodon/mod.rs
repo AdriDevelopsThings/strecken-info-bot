@@ -22,10 +22,12 @@ fn get_user_agent() -> String {
 }
 
 fn limit_message(message: String, limit: usize) -> String {
-    if message.len() <= limit {
+    let chars = message.chars().collect::<Vec<char>>();
+    if chars.len() <= limit {
         message
     } else {
-        format!("{}...", &message[..limit - 4])
+        let reduced_chars = &chars[..limit - 4];
+        format!("{}...", reduced_chars.iter().collect::<String>())
     }
 }
 
