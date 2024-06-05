@@ -56,6 +56,13 @@ async fn main() {
         #[cfg(feature = "metrics")]
         start_server(database.clone()).await;
 
+        // exit the process if a worker panics
+        let default_panic = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            default_panic(info);
+            std::process::exit(1);
+        }));
+
         futures::future::join_all(tasks).await;
     }
 }
