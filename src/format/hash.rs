@@ -1,61 +1,29 @@
-use strecken_info::Disruption;
+use strecken_info::disruptions::Disruption;
 
 pub fn format_hash(disruption: &Disruption) -> String {
     let mut input = String::new();
     input += "p:";
-    input += match disruption.planned {
-        true => "1",
-        false => "0",
-    };
     input += "l:";
     input += disruption
-        .locations
+        .stations
         .iter()
-        .map(|location| {
-            location.from.name.clone()
-                + location
-                    .to
-                    .clone()
-                    .map(|l| l.name)
-                    .unwrap_or_default()
-                    .as_str()
-        })
+        .map(|location| location.ril100.clone())
         .collect::<Vec<String>>()
         .join(";")
         .as_str();
     input += "r:";
-    input += disruption
-        .regions
-        .iter()
-        .map(|region| region.name.clone())
-        .collect::<Vec<String>>()
-        .join(";")
-        .as_str();
+    input += disruption.regions.to_vec().join(";").as_str();
     input += "i:";
-    input += disruption
-        .impact
-        .clone()
-        .map(|impacts| {
-            impacts
-                .into_iter()
-                .map(|impact| impact.impact)
-                .collect::<Vec<String>>()
-                .join(";")
-        })
-        .unwrap_or_default()
-        .as_str();
-    input += "e:";
-    input += disruption
-        .events
+    input += &disruption.cause;
+    input += &disruption.subcause.clone().unwrap_or_default();
+    input += &disruption
+        .effects
         .iter()
-        .map(|event| format!("{}-{}", event.start_time, event.end_time))
+        .map(|effect| effect.effect.clone())
         .collect::<Vec<String>>()
-        .join(";")
-        .as_str();
-    input += "h:";
-    input += &disruption.head;
+        .join(",");
     input += "t:";
-    input += disruption.text.clone().unwrap_or_default().as_str();
+    input += &disruption.text;
 
     format!("{:x}", md5::compute(input.as_bytes()))
 }

@@ -1,17 +1,15 @@
-use strecken_info::Disruption;
+use strecken_info::disruptions::Disruption;
 
 pub enum DisruptionFilter {
     TooLongDisruption { days: u8 },
-    NotPlanned,
 }
 
 impl DisruptionFilter {
     pub fn filter(&self, disruption: &Disruption) -> bool {
         match self {
             Self::TooLongDisruption { days } => {
-                (disruption.end_date - disruption.start_date).num_days() < *days as i64
+                (disruption.period.end - disruption.period.start).num_days() < *days as i64
             }
-            Self::NotPlanned => !disruption.planned,
         }
     }
 

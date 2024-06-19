@@ -3,7 +3,6 @@ use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use typemap_rev::TypeMapKey;
 
 use info::*;
-use planned::*;
 use subscribe::*;
 use tw::*;
 
@@ -16,11 +15,9 @@ use super::DisruptionInformation;
 mod format;
 mod info;
 mod message_sender;
-mod planned;
 mod subscribe;
 mod tw;
 mod user;
-mod user_filter;
 
 struct HashMapDatabase;
 impl TypeMapKey for HashMapDatabase {
@@ -37,8 +34,7 @@ pub fn create_client(bot_token: String) -> Client {
             version,
             git,
             feedback,
-            tw,
-            planned
+            tw
         ))
         .build()
 }

@@ -1,23 +1,11 @@
-use chrono::{DateTime, Utc};
-use chrono_tz::{Europe::Berlin, Tz};
-use strecken_info::{Disruption, Product};
+use strecken_info::disruptions::{Disruption, Product};
 
 pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> String {
-    if !disruption.locations.is_empty() {
+    if !disruption.stations.is_empty() {
         let mut locations = disruption
-            .locations
+            .stations
             .iter()
-            .map(|location| {
-                format!(
-                    "{}{}",
-                    location.from.name.clone(),
-                    if let Some(to) = &location.to {
-                        format!(" - {}", to.name)
-                    } else {
-                        String::new()
-                    }
-                )
-            })
+            .map(|station| format!("{} ({})", station.name, station.ril100))
             .collect::<Vec<String>>();
         let mut add_after_locations = "";
         if let Some(max_locations) = max_locations {
@@ -28,69 +16,52 @@ pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> St
         }
         locations.join(", ") + add_after_locations
     } else if !disruption.regions.is_empty() {
-        disruption
-            .regions
-            .iter()
-            .map(|region| region.name.clone())
-            .collect::<Vec<String>>()
-            .join(", ")
+        disruption.regions.to_vec().join(", ")
     } else {
         "Unbekannt".to_string()
     }
 }
 
-pub fn get_impacts(disruption: &Disruption) -> Vec<String> {
-    let mut impacts = disruption
-        .impact
-        .clone()
-        .unwrap_or_default()
-        .iter()
-        .map(|impact| impact.impact.clone())
-        .collect::<Vec<String>>();
-    impacts.dedup();
-    impacts
+pub fn get_cause(disruption: &Disruption) -> String {
+    format!(
+        "{}{}",
+        disruption.cause,
+        match &disruption.subcause {
+            Some(subcause) => format!(" - {subcause}"),
+            None => String::new(),
+        }
+    )
 }
 
-pub fn get_product_impacts(disruption: &Disruption) -> Vec<&str> {
-    let mut product_impacts = disruption
-        .impact
-        .clone()
-        .unwrap_or_default()
+pub fn get_product_effects(disruption: &Disruption) -> String {
+    let mut product_effects = disruption
+        .effects
         .iter()
-        .map(|impact| match impact.product {
-            Product::LongDistance => "SPFV",
-            Product::Local => "SPNV",
-            Product::Freight => "SGV",
-        })
-        .collect::<Vec<&str>>();
-    product_impacts.dedup();
-    product_impacts
-}
-
-pub fn get_end(disruption: &Disruption) -> DateTime<Tz> {
-    disruption
-        .end_date
-        .and_time(disruption.end_time)
-        .and_local_timezone(Berlin)
-        .unwrap()
-}
-
-pub fn get_events(disruption: &Disruption, end: DateTime<Tz>) -> Vec<String> {
-    let mut events = disruption
-        .events
-        .iter()
-        .map(|event| {
+        .map(|effect| {
             format!(
-                "{} bis {}{}",
-                event.start_time.format("%d.%m.%Y %H:%M"),
-                match end > Utc::now() {
-                    true => "vsl. ",
-                    false => "",
-                },
-                event.end_time.format("%d.%m.%Y %H:%M")
+                "{} ({})",
+                effect.effect,
+                effect
+                    .product
+                    .iter()
+                    .map(|product| match product {
+                        Product::LongDistance => "SPFV",
+                        Product::Local => "SPNV",
+                        Product::Freight => "SGV",
+                    })
+                    .collect::<Vec<&str>>()
+                    .join(", ")
             )
         })
         .collect::<Vec<String>>();
-    events.dedup();
-    events
+    product_effects.dedup();
+    product_effects.join(", ")
+}
+
+pub fn get_times(disruption: &Disruption) -> String {
+    format!(
+        "{} bis {}",
+        disruption.period.start.format("%d.%m.%Y %H:%M"),
+        disruption.period.end.format("%d.%m.%Y %H:%M")
+    )
 }

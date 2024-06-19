@@ -16,8 +16,6 @@ You are able to host this bot yourself by using docker or build a binary with `c
 
 **By source**: Build a binary with ``cargo build --release`` and run the binary: You have to set the environment variable ``SQLITE_PATH`` and ``TELEGRAM_BOT_TOKEN`` for telegram and/or `MASTODON_URL` and `MASTODON_ACCESS_TOKEN` for mastodon.
 
-It's also possible to change the value of the `FETCH_EVERY_SECONDS` environment variable to something other value than 120.
-
 ## Feedback and contribution
 
 If you noticed some bugs or are interested in new features just create an issue. You can also contribute to this repository by forking this repository and creating a pull request. 

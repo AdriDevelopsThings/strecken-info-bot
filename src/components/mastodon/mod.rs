@@ -12,10 +12,7 @@ use crate::{components::DisruptionInformation, filter::DisruptionFilter, Databas
 
 mod format;
 
-const MASTODON_FILTERS: &[DisruptionFilter] = &[
-    DisruptionFilter::TooLongDisruption { days: 7 },
-    DisruptionFilter::NotPlanned,
-];
+const MASTODON_FILTERS: &[DisruptionFilter] = &[DisruptionFilter::TooLongDisruption { days: 7 }];
 
 fn get_user_agent() -> String {
     format!("strecken-info-telegram/{}", env!("CARGO_PKG_VERSION"))

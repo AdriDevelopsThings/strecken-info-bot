@@ -1,7 +1,7 @@
 use std::env;
 
 use log::{error, info, warn};
-use strecken_info::Disruption;
+use strecken_info::disruptions::Disruption;
 use tokio::{
     sync::mpsc::{unbounded_channel, UnboundedSender},
     task::JoinHandle,

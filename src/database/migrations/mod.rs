@@ -7,6 +7,7 @@ mod migration_2;
 mod migration_3;
 mod migration_4;
 mod migration_5;
+mod migration_6;
 
 type MigrationFunction = fn(&PooledConnection<SqliteConnectionManager>);
 
@@ -16,6 +17,7 @@ static MIGRATIONS: &[(i32, MigrationFunction)] = &[
     (3, migration_3::migrate),
     (4, migration_4::migrate),
     (5, migration_5::migrate),
+    (6, migration_6::migrate),
 ];
 
 fn run_migration(

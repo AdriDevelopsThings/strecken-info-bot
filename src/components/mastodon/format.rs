@@ -1,16 +1,15 @@
-use chrono::Utc;
-use strecken_info::Disruption;
+use strecken_info::disruptions::Disruption;
 
 use crate::format::{
     format_text,
-    partial_format::{get_end, get_events, get_impacts, get_location},
+    partial_format::{get_cause, get_location, get_product_effects, get_times},
 };
 
 pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
     let location = get_location(disruption, Some(8));
-    let impacts = get_impacts(disruption).join("\n");
-    let end = get_end(disruption);
-    let prefix = if Utc::now() > end {
+    let cause = get_cause(disruption);
+    let effects = get_product_effects(disruption);
+    let prefix = if disruption.expired {
         "✅ Beendet: "
     } else {
         match changed {
@@ -18,10 +17,10 @@ pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
             false => "⚠️",
         }
     };
-    let times = get_events(disruption, end).join("\n");
+    let times = get_times(disruption);
     format!(
-        "{prefix}{location}\n{impacts}\n{}\n{times}\n{}",
-        format_text(&disruption.head),
-        format_text(&disruption.text.clone().unwrap_or_default())
+        "{prefix}{location}\n{cause}\n{effects}\n{}\n{times}\n{}",
+        format_text(&disruption.cause),
+        format_text(&disruption.text.clone())
     )
 }

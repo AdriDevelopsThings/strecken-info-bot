@@ -10,7 +10,7 @@ use tokio::sync::{mpsc::UnboundedReceiver, Semaphore};
 
 use crate::{
     components::{
-        telegram::{format, user::User, user_filter::UserFilter},
+        telegram::{format, user::User},
         DisruptionInformation,
     },
     database::Database,
@@ -19,7 +19,6 @@ use crate::{
 
 const MAX_REQUESTS_AT_THE_SAME_TIME: usize = 16;
 const FILTERS: &[DisruptionFilter] = &[DisruptionFilter::TooLongDisruption { days: 7 }];
-const USER_FILTERS: &[UserFilter] = &[UserFilter::Planned];
 
 #[derive(Clone)]
 pub struct MessageSender {
@@ -82,9 +81,6 @@ impl MessageSender {
                 .collect::<Result<Vec<User>, r2d2_sqlite::rusqlite::Error>>()?;
 
             for user in users {
-                if !UserFilter::filters(USER_FILTERS, &disruption.disruption, &user) {
-                    continue;
-                }
                 let message = if let Some(trigger) = user.is_trigger(&message) {
                     format!("TW: {trigger}\n<span class=\"tg-spoiler\">{message}</span>")
                 } else {

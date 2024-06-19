@@ -1,16 +1,13 @@
 use r2d2_sqlite::rusqlite::Row;
 
 pub struct User {
-    pub id: i32,
     pub chat_id: i64,
     pub trigger_warnings: Vec<String>,
-    pub show_planned_disruptions: bool,
 }
 
 impl User {
     pub fn from_row(value: &Row) -> Result<Self, r2d2_sqlite::rusqlite::Error> {
         Ok(Self {
-            id: value.get(0)?,
             chat_id: value.get(1)?,
             trigger_warnings: value
                 .get::<usize, String>(2)?
@@ -18,7 +15,6 @@ impl User {
                 .map(|s| s.to_owned())
                 .filter(|s| !s.is_empty())
                 .collect(),
-            show_planned_disruptions: value.get(3)?,
         })
     }
 
