@@ -5,8 +5,21 @@ pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> St
         let mut locations = disruption
             .stations
             .iter()
-            .map(|station| format!("{} ({})", station.name, station.ril100))
+            .map(|station| {
+                format!(
+                    "{} ({})",
+                    station
+                        .name
+                        .trim()
+                        .split(' ')
+                        .filter(|s| !s.is_empty())
+                        .collect::<Vec<&str>>()
+                        .join(" "),
+                    station.ril100
+                )
+            })
             .collect::<Vec<String>>();
+        locations.dedup();
         let mut add_after_locations = "";
         if let Some(max_locations) = max_locations {
             if locations.len() > max_locations {
