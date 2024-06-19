@@ -8,7 +8,7 @@ use crate::format::{
 
 pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
     let head = format!(
-        "{}\n{}\n",
+        "{}\n{}",
         get_cause(disruption),
         get_product_effects(disruption)
     );
