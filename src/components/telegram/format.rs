@@ -3,7 +3,7 @@ use strecken_info::disruptions::Disruption;
 
 use crate::format::{
     format_text,
-    partial_format::{get_cause, get_location, get_product_effects, get_times},
+    partial_format::{get_cause, get_location, get_product_effects, get_times, is_expired},
 };
 
 pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
@@ -15,7 +15,7 @@ pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
     let text = disruption.text.clone();
     let prefix = match changed {
         true => {
-            if disruption.expired {
+            if is_expired(disruption) {
                 "Beendet: "
             } else {
                 "Update: "

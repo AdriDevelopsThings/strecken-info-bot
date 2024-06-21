@@ -2,14 +2,14 @@ use strecken_info::disruptions::Disruption;
 
 use crate::format::{
     format_text,
-    partial_format::{get_cause, get_location, get_product_effects, get_times},
+    partial_format::{get_cause, get_location, get_product_effects, get_times, is_expired},
 };
 
 pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
     let location = get_location(disruption, Some(8));
     let cause = get_cause(disruption);
     let effects = get_product_effects(disruption);
-    let prefix = if disruption.expired {
+    let prefix = if is_expired(disruption) {
         "✅ Beendet: "
     } else {
         match changed {

@@ -1,3 +1,5 @@
+use chrono::Utc;
+use chrono_tz::Europe::Berlin;
 use strecken_info::disruptions::{Disruption, Product};
 
 pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> String {
@@ -77,4 +79,8 @@ pub fn get_times(disruption: &Disruption) -> String {
         disruption.period.start.format("%d.%m.%Y %H:%M"),
         disruption.period.end.format("%d.%m.%Y %H:%M")
     )
+}
+
+pub fn is_expired(disruption: &Disruption) -> bool {
+    disruption.expired || Utc::now() > disruption.period.end.and_local_timezone(Berlin).unwrap()
 }
