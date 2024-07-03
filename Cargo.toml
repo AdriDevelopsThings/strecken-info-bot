@@ -1,6 +1,6 @@
 [package]
 name = "strecken-info-bot"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 repository = "https://github.com/AdriDevelopsThings/strecken-info-bot"
 
@@ -27,7 +27,7 @@ futures = "0"
 html-escape = "0"
 log = "0"
 md5 = "0"
-megalodon = { version = "0", optional = true, git = "https://github.com/AdriDevelopsThings/megalodon-rs"}
+megalodon = { version = "0", optional = true }
 r2d2 = { version = "0", default-features = false }
 r2d2_sqlite = { version = "0", default-features = false, features = ["bundled"] }
 regex = "1"
