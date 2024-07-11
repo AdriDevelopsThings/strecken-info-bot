@@ -3,38 +3,38 @@ use chrono_tz::Europe::Berlin;
 use strecken_info::disruptions::{Disruption, Product};
 
 pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> String {
-    if !disruption.stations.is_empty() {
-        let mut locations = disruption
-            .stations
-            .iter()
-            .map(|station| {
-                format!(
-                    "{} ({})",
-                    station
-                        .name
-                        .trim()
-                        .split(' ')
-                        .filter(|s| !s.is_empty())
-                        .collect::<Vec<&str>>()
-                        .join(" "),
-                    station.ril100
-                )
-            })
-            .collect::<Vec<String>>();
-        locations.dedup();
-        let mut add_after_locations = "";
-        if let Some(max_locations) = max_locations {
-            if locations.len() > max_locations {
-                locations = locations[0..max_locations - 1].to_vec();
-                add_after_locations = "...";
-            }
-        }
-        locations.join(", ") + add_after_locations
-    } else if !disruption.regions.is_empty() {
-        disruption.regions.to_vec().join(", ")
-    } else {
-        "Unbekannt".to_string()
+    let mut locations = disruption
+        .stations
+        .iter()
+        .map(|station| {
+            format!(
+                "{} ({})",
+                station
+                    .name
+                    .trim()
+                    .split(' ')
+                    .filter(|s| !s.is_empty())
+                    .collect::<Vec<&str>>()
+                    .join(" "),
+                station.ril100
+            )
+        })
+        .collect::<Vec<String>>();
+
+    locations.extend(disruption.regions.iter().cloned());
+    locations.dedup();
+    if locations.is_empty() {
+        locations.push("Unbekannt".to_string())
     }
+
+    if let Some(max_locations) = max_locations {
+        if locations.len() > max_locations {
+            locations = locations[0..max_locations - 1].to_vec();
+            locations.push("...".to_string());
+        }
+    }
+
+    locations.join(", ")
 }
 
 pub fn get_cause(disruption: &Disruption) -> String {
