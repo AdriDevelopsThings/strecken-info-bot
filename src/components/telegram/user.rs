@@ -1,4 +1,4 @@
-use r2d2_sqlite::rusqlite::Row;
+use bb8_postgres::tokio_postgres::Row;
 
 pub struct User {
     pub chat_id: i64,
@@ -6,16 +6,11 @@ pub struct User {
 }
 
 impl User {
-    pub fn from_row(value: &Row) -> Result<Self, r2d2_sqlite::rusqlite::Error> {
-        Ok(Self {
-            chat_id: value.get(1)?,
-            trigger_warnings: value
-                .get::<usize, String>(2)?
-                .split(',')
-                .map(|s| s.to_owned())
-                .filter(|s| !s.is_empty())
-                .collect(),
-        })
+    pub fn from_row(value: &Row) -> Self {
+        Self {
+            chat_id: value.get(1),
+            trigger_warnings: value.get::<_, Vec<String>>(2),
+        }
     }
 
     pub fn is_trigger(&self, message: &str) -> Option<String> {

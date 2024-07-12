@@ -1,21 +1,36 @@
 use std::env;
 
-use axum::{extract, routing, serve, Router};
+use axum::{extract, response::IntoResponse, routing, serve, Router};
 use log::info;
-use r2d2_sqlite::rusqlite::params;
+use reqwest::StatusCode;
 
-use crate::Database;
+use crate::{database::DbError, Database};
 
-async fn metrics(extract::State(database): extract::State<Database>) -> String {
-    let connection = database.get_connection().unwrap();
+impl IntoResponse for DbError {
+    fn into_response(self) -> axum::response::Response {
+        StatusCode::INTERNAL_SERVER_ERROR.into_response()
+    }
+}
+
+async fn metrics(extract::State(database): extract::State<Database>) -> Result<String, DbError> {
+    let connection = database.get_connection().await?;
     let metrics_prefix =
         env::var("METRICS_PREFIX").unwrap_or_else(|_| "strecken_info_telegram".to_string());
-    let users: i32 = connection
-        .query_row("SELECT COUNT(id) FROM user", params![], |row| row.get(0))
-        .unwrap();
-    let disruptions: i32 = connection.query_row("SELECT COUNT(id) FROM disruption WHERE start_time < datetime('now') AND end_time > datetime('now')", params![], |row| row.get(0)).unwrap();
+    let users: i64 = connection
+        .query_one("SELECT COUNT(id) FROM telegram_user", &[])
+        .await?
+        .get(0);
+    let disruptions: i64 = connection
+        .query_one(
+            "SELECT COUNT(id) FROM disruption WHERE start_time < NOW() AND end_time > NOW()",
+            &[],
+        )
+        .await?
+        .get(0);
 
-    format!("{metrics_prefix}_users {users}\n{metrics_prefix}_disruptions {disruptions}")
+    Ok(format!(
+        "{metrics_prefix}_users {users}\n{metrics_prefix}_disruptions {disruptions}"
+    ))
 }
 
 pub async fn start_server(database: Database) {

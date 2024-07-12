@@ -8,19 +8,17 @@ pub async fn show_users(database: Database) {
     let client = create_client(
         env::var("TELEGRAM_BOT_TOKEN").expect("Environment variable 'TELEGRAM_BOT_TOKEN' not set"),
     );
-    let connection = database.get_connection().unwrap();
-    let mut statement = connection.prepare("SELECT chat_id FROM user").unwrap();
-    let users = statement
-        .query_map([], |row| row.get(0))
-        .unwrap()
-        .collect::<Result<Vec<i64>, r2d2_sqlite::rusqlite::Error>>()
+    let connection = database.get_connection().await.unwrap();
+    let rows = connection
+        .query("SELECT chat_id FROM telegram_user", &[])
+        .await
         .unwrap();
-    println!("{} chats are currently registered:\n", users.len());
-    for user in users {
+    println!("{} chats are currently registered:\n", rows.len());
+    for row in rows {
         let chat = client
             .api_client
             .get_chat(GetChat {
-                chat_id: user.into(),
+                chat_id: row.get::<_, i64>(0).into(),
             })
             .await
             .unwrap();

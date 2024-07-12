@@ -7,7 +7,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::Database;
+use crate::{change::DisruptionPart, Database};
 
 #[cfg(feature = "mastodon")]
 pub mod mastodon;
@@ -19,8 +19,9 @@ pub mod telegram;
 use crate::components::telegram::run_bot;
 
 pub struct DisruptionInformation {
-    pub disruption_id: i64,
-    pub changed: bool,
+    pub disruption_id: i32,
+    pub changes: Vec<DisruptionPart>,
+    pub update: bool,
     pub disruption: Disruption,
 }
 
@@ -83,14 +84,16 @@ impl Components {
 
     pub fn push(
         &self,
-        disruption_id: i64,
-        changed: bool,
+        disruption_id: i32,
+        changes: Vec<DisruptionPart>,
+        update: bool,
         disruption: Disruption,
-    ) -> Result<(), String> {
+    ) {
         for channel in &self.channels {
             if let Err(e) = channel.send(DisruptionInformation {
                 disruption_id,
-                changed,
+                changes: changes.clone(),
+                update,
                 disruption: disruption.clone(),
             }) {
                 error!(
@@ -98,6 +101,5 @@ impl Components {
                 );
             };
         }
-        Ok(())
     }
 }

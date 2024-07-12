@@ -1,7 +1,6 @@
 use std::{error, sync::Arc};
 
 use log::{error, info};
-use r2d2_sqlite::rusqlite::params;
 use telexide::{
     api::{types::SendMessage, API},
     Error, TelegramError,
@@ -48,8 +47,10 @@ impl MessageSender {
                 {
                     self.database
                         .get_connection()
+                        .await
                         .unwrap()
-                        .execute("DELETE FROM user WHERE chat_id=?", params![chat_id])
+                        .execute("DELETE FROM telegram_user WHERE chat_id=$1", &[&chat_id])
+                        .await
                         .unwrap();
                 } else {
                     error!("Api error while sending message to telegram: {api_response}");
@@ -70,15 +71,18 @@ impl MessageSender {
                 continue;
             }
 
-            let message = format::format(&disruption.disruption, disruption.changed);
+            let message = format::format(&disruption.disruption, disruption.update);
 
-            let connection = self.database.get_connection().unwrap();
-            let mut statement = connection.prepare(
-                "SELECT id, chat_id, trigger_warning_list, show_planned_disruptions FROM user",
-            )?;
-            let users = statement
-                .query_map([], User::from_row)?
-                .collect::<Result<Vec<User>, r2d2_sqlite::rusqlite::Error>>()?;
+            let connection = self.database.get_connection().await.unwrap();
+            let statement = connection
+                .prepare("SELECT id, chat_id, trigger_warnings, show_planned_disruptions FROM telegram_user")
+                .await?;
+            let users = connection
+                .query(&statement, &[])
+                .await?
+                .iter()
+                .map(User::from_row)
+                .collect::<Vec<User>>();
 
             for user in users {
                 let message = if let Some(trigger) = user.is_trigger(&message) {

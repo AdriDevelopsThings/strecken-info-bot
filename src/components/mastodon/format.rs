@@ -1,26 +1,42 @@
-use strecken_info::disruptions::Disruption;
+use strecken_info::disruptions::{Disruption, TrackRestriction};
 
-use crate::format::{
-    format_text,
-    partial_format::{get_cause, get_location, get_product_effects, get_times, is_expired},
+use crate::{
+    change::DisruptionPart,
+    format::{
+        format_text,
+        partial_format::{get_cause, get_location, get_product_effects, get_times, is_expired},
+    },
 };
 
-pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
-    let location = get_location(disruption, Some(8));
-    let cause = get_cause(disruption);
-    let effects = get_product_effects(disruption);
+pub(super) fn format(disruption: &Disruption, changes: &[DisruptionPart], update: bool) -> String {
     let prefix = if is_expired(disruption) {
         "✅ Beendet: "
     } else {
-        match changed {
+        match update {
             true => "Update: ",
-            false => "⚠️",
+            false => match disruption.track_restriction {
+                TrackRestriction::Severe => "❌ ",
+                TrackRestriction::Slight => "⚠️ ",
+            },
         }
     };
-    let times = get_times(disruption);
-    format!(
-        "{prefix}{location}\n{cause}\n{effects}\n{}\n{times}\n{}",
-        format_text(&disruption.cause),
-        format_text(&disruption.text.clone())
-    )
+
+    let mut str = prefix.to_string();
+    if changes.contains(&DisruptionPart::Locations) {
+        str += &format!("{}\n", get_location(disruption, Some(8)));
+    }
+    if changes.contains(&DisruptionPart::Cause) {
+        str += &format!("{}\n", format_text(&get_cause(disruption)));
+    }
+    if changes.contains(&DisruptionPart::Effects) {
+        str += &format!("{}\n", get_product_effects(disruption));
+    }
+    if changes.contains(&DisruptionPart::Times) {
+        str += &format!("{}\n", get_times(disruption));
+    }
+    if changes.contains(&DisruptionPart::Text) {
+        str += &format!("{}\n", format_text(&disruption.text.clone()));
+    }
+
+    str
 }

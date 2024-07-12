@@ -1,5 +1,4 @@
 use megalodon::megalodon::GetAccountStatusesInputOptions;
-use r2d2_sqlite::rusqlite::params;
 
 use crate::{Database, MastodonSender};
 
@@ -11,7 +10,7 @@ pub async fn clear_toots(database: Database) {
         return;
     }
     let client = MastodonSender::create_client_by_env();
-    let connection = database.get_connection().unwrap();
+    let connection = database.get_connection().await.unwrap();
 
     let me = client
         .verify_account_credentials()
@@ -54,5 +53,8 @@ pub async fn clear_toots(database: Database) {
     }
 
     println!("Clearing toots stored in the database");
-    connection.execute("DELETE FROM toots", params![]).unwrap();
+    connection
+        .execute("DELETE FROM mastodon_toot", &[])
+        .await
+        .unwrap();
 }

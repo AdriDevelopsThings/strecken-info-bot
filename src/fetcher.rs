@@ -1,7 +1,6 @@
-use std::{env, error::Error};
+use std::env;
 
 use log::{debug, error};
-use r2d2_sqlite::rusqlite::params;
 use strecken_info::{
     disruptions::{request_disruptions, Disruption},
     filter::DisruptionsFilter,
@@ -9,7 +8,13 @@ use strecken_info::{
 };
 use tokio::sync::mpsc;
 
-use crate::{database::Database, format::hash::format_hash, Components};
+use crate::{
+    change::{get_disruption_changes, ALL_DISRUPTION_PARTS},
+    database::Database,
+    error::StreckenInfoBotError,
+    format::hash::format_hash,
+    Components,
+};
 
 pub fn start_fetching(database: Database, components: Components) {
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<Disruption>>();
@@ -46,7 +51,7 @@ pub fn start_fetching(database: Database, components: Components) {
 
     tokio::spawn(async move {
         while let Some(s) = rx.recv().await {
-            if let Err(e) = fetched(database.clone(), s, components.clone()) {
+            if let Err(e) = fetched(database.clone(), s, components.clone()).await {
                 error!("Error while handling new fetch: {e}");
             }
         }
@@ -63,56 +68,85 @@ async fn do_heartbeat() {
     }
 }
 
-fn fetched(
+async fn fetched(
     database: Database,
     disruptions: Vec<Disruption>,
     components: Components,
-) -> Result<(), Box<dyn Error>> {
-    let connection = database.get_connection()?;
+) -> Result<(), StreckenInfoBotError> {
+    let connection = database.get_connection().await?;
 
-    let mut changes = 0;
+    let mut change_count = 0;
     for disruption in disruptions {
-        let hash = format_hash(&disruption);
-        let db_disruption = connection.query_row(
-            "SELECT id, hash FROM disruption WHERE key=?",
-            params![&disruption.key],
-            |row| Ok((row.get::<usize, i64>(0)?, row.get::<usize, String>(1)?)),
-        );
-        let (send, changed, disruption_id) = match db_disruption {
-            Ok((disruption_id, db_hash)) => (hash != db_hash, true, Some(disruption_id)),
-            Err(_) => (true, false, None),
-        };
-        if send {
-            changes += 1;
+        let db_disruption = connection
+            .query_opt(
+                "SELECT id, hash, json FROM disruption WHERE key=$1",
+                &[&disruption.key],
+            )
+            .await?;
+        // changes: list of parts of disruption that changed
+        // update: true => disruption was updated, false => disruption is new
+        // disruption_id: id of disruption in database
+        // contains_json: database already contains json
+        let (changes, update, disruption_id, contains_json) = match db_disruption {
+            Some(row) => {
+                let db_disruption = row
+                    .get::<_, Option<serde_json::Value>>(2)
+                    .map(serde_json::from_value)
+                    .transpose()?;
+                let contains_json = db_disruption.is_some();
+                Ok::<_, StreckenInfoBotError>((
+                    get_disruption_changes(db_disruption, row.get(1), &disruption),
+                    true,
+                    Some(row.get(0)),
+                    contains_json,
+                ))
+            }
+            None => Ok((ALL_DISRUPTION_PARTS.to_vec(), false, None, false)), // all parts changed (new disruption)
+        }?;
+        if !changes.is_empty() {
+            change_count += 1;
             // Entry changed
 
-            let start_time_sql = disruption
-                .period
-                .start
-                .format("%Y-%m-%d %H:%M:%S")
-                .to_string();
-            let end_time_sql = disruption
-                .period
-                .end
-                .format("%Y-%m-%d %H:%M:%S")
-                .to_string();
-            connection.execute(
-                "INSERT INTO disruption(key, hash, start_time, end_time) VALUES(?, ?, ?, ?)
+            // disruption is new or was updated, insert or update
+            let returning = connection
+                .query_one(
+                    "INSERT INTO disruption(key, hash, start_time, end_time, json) VALUES($1, $2, $3, $4, $5)
                 ON CONFLICT(key) DO UPDATE
-                SET hash=excluded.hash,
-                    start_time=excluded.start_time,
-                    end_time=excluded.end_time",
-                params![&disruption.key, hash, start_time_sql, end_time_sql],
-            )?;
+                SET hash=EXCLUDED.hash,
+                    start_time=EXCLUDED.start_time,
+                    end_time=EXCLUDED.end_time,
+                    json=EXCLUDED.json
+                RETURNING id",
+                    &[
+                        &disruption.key,
+                        &format_hash(&disruption),
+                        &disruption.period.start,
+                        &disruption.period.end,
+                        &serde_json::to_value(&disruption).unwrap()
+                    ],
+                )
+                .await?;
 
             components.push(
-                disruption_id.unwrap_or_else(|| connection.last_insert_rowid()),
-                changed,
+                disruption_id.unwrap_or_else(|| returning.get(0)),
+                changes,
+                update,
                 disruption.clone(),
-            )?;
+            );
+        } else if !contains_json {
+            // disruption already exists, but doesn't contain json yet
+            connection
+                .execute(
+                    "UPDATE disruption SET json=$1 WHERE id=$2",
+                    &[
+                        &serde_json::to_value(&disruption)?,
+                        &disruption_id.unwrap(), // disruption_id is some, never none
+                    ],
+                )
+                .await?;
         }
     }
-    debug!("{changes} disruptions found/changed");
+    debug!("{change_count} disruptions found/changed");
     tokio::spawn(do_heartbeat());
     Ok(())
 }

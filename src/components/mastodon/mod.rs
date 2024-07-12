@@ -5,7 +5,6 @@ use megalodon::{
     megalodon::{PostStatusInputOptions, PostStatusOutput},
     Megalodon,
 };
-use r2d2_sqlite::rusqlite::params;
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 
 use crate::{components::DisruptionInformation, filter::DisruptionFilter, Database};
@@ -15,7 +14,7 @@ mod format;
 const MASTODON_FILTERS: &[DisruptionFilter] = &[DisruptionFilter::TooLongDisruption { days: 7 }];
 
 fn get_user_agent() -> String {
-    format!("strecken-info-telegram/{}", env!("CARGO_PKG_VERSION"))
+    format!("strecken-info-bot/{}", env!("CARGO_PKG_VERSION"))
 }
 
 fn limit_message(message: String, limit: usize) -> String {
@@ -113,34 +112,39 @@ impl MastodonSender {
     /// `disruption_id` must contain the primary key of the disruption in the disruption table of the database
     /// `message` must contain the message that should be sent to mastodon
     /// the `message` string could be reduced cause of character limitations
-    async fn send_disruption(&self, disruption_id: i64, message: String) {
+    async fn send_disruption(&self, disruption_id: i32, message: String) {
         let message = limit_message(message, self.max_status_characters as usize);
-        let connection = self.database.get_connection().unwrap();
+        let connection = self.database.get_connection().await.unwrap();
         // toot_id will contain the primary key of the toot in the toot table
         // status_id will contain the id of the last mastodon status associated with the disruption
-        let (toot_id, status_id) = match connection.query_row(
-            "SELECT id, status_id FROM toots WHERE disruption_id=?",
-            params![disruption_id],
-            |row| Ok((row.get::<usize, i64>(0)?, row.get::<usize, String>(1)?)),
-        ) {
-            Ok((toot_id, status_id)) => (Some(toot_id), Some(status_id)),
-            Err(_) => (None, None),
+        let (toot_id, status_id) = match connection
+            .query_opt(
+                "SELECT id, status_id FROM mastodon_toot WHERE disruption_id=$1",
+                &[&disruption_id],
+            )
+            .await
+            .unwrap()
+        {
+            Some(row) => (Some(row.get::<_, i32>(0)), Some(row.get(1))),
+            None => (None, None),
         };
 
         let new_status_id = self.post_status(message, status_id).await;
         if let Some(toot_id) = toot_id {
             connection
                 .execute(
-                    "UPDATE toots SET status_id=? WHERE id=?",
-                    params![new_status_id, toot_id],
+                    "UPDATE mastodon_toot SET status_id=$1 WHERE id=$2",
+                    &[&new_status_id, &toot_id],
                 )
+                .await
                 .unwrap();
         } else {
             connection
                 .execute(
-                    "INSERT INTO toots(status_id, disruption_id) VALUES (?,?)",
-                    params![new_status_id, disruption_id],
+                    "INSERT INTO mastodon_toot(status_id, disruption_id) VALUES ($1,$2)",
+                    &[&new_status_id, &disruption_id],
                 )
+                .await
                 .unwrap();
         }
     }
@@ -153,7 +157,11 @@ impl MastodonSender {
                 if DisruptionFilter::filters(MASTODON_FILTERS, &disruption.disruption) {
                     self.send_disruption(
                         disruption.disruption_id,
-                        format::format(&disruption.disruption, disruption.changed),
+                        format::format(
+                            &disruption.disruption,
+                            &disruption.changes,
+                            disruption.update,
+                        ),
                     )
                     .await;
                 }

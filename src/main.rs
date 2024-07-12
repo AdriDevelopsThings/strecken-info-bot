@@ -9,7 +9,7 @@ use strecken_info_bot::clear_toots;
 use strecken_info_bot::show_users;
 #[cfg(feature = "metrics")]
 use strecken_info_bot::start_server;
-use strecken_info_bot::{reset_disruptions, start_cleaning, start_fetching, Components, Database};
+use strecken_info_bot::{reset_disruptions, start_fetching, Components, Database};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -29,10 +29,14 @@ async fn main() {
     let args = Args::parse();
     dotenv().ok();
     let database = Database::new(
-        &env::var("SQLITE_PATH").expect("No SQLITE_PATH environment variable supplied"),
+        &env::var("POSTGRESQL_CONFIG").expect("No POSTGRESQL_CONFIG environment variable supplied"),
     )
-    .unwrap();
-    database.initialize().unwrap();
+    .await
+    .expect("Error while connecting to database");
+    database
+        .initialize()
+        .await
+        .expect("Error while initializing database");
     #[cfg(feature = "mastodon")]
     if args.clear_toots {
         clear_toots(database).await;
@@ -52,7 +56,6 @@ async fn main() {
 
         start_fetching(database.clone(), components);
 
-        start_cleaning(database.clone());
         #[cfg(feature = "metrics")]
         start_server(database.clone()).await;
 

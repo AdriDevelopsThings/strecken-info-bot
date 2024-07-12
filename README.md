@@ -10,11 +10,14 @@ Just follow [https://social.adridoesthings.com/@strecken_info](https://social.ad
 
 ## Host it yourself
 
-You are able to host this bot yourself by using docker or build a binary with `cargo` yourself.
+You are able to host this bot yourself by using docker or build a binary with `cargo` yourself but you have to host a postgresql database too.
 
-**Docker**: ``docker run --name strecken-info-telegram -d -v database:/database -e TELEGRAM_BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN -e MASTODON_URL=https://your.mastodon.instance.com -e MASTODON_ACCESS_TOKEN=YOUR_ACCESS_TOKEN ghcr.io/adridevelopsthings/strecken-info-telegram:main``
+**Docker**: ``docker run --name strecken-info-telegram -d -e POSTGRESQL_CONFIG=YOUR_POSTGRESQL_CONFIG_HERE -e TELEGRAM_BOT_TOKEN=YOUR_TELEGRAM_BOT_TOKEN -e MASTODON_URL=https://your.mastodon.instance.com -e MASTODON_ACCESS_TOKEN=YOUR_ACCESS_TOKEN ghcr.io/adridevelopsthings/strecken-info-telegram:main``
 
-**By source**: Build a binary with ``cargo build --release`` and run the binary: You have to set the environment variable ``SQLITE_PATH`` and ``TELEGRAM_BOT_TOKEN`` for telegram and/or `MASTODON_URL` and `MASTODON_ACCESS_TOKEN` for mastodon.
+**By source**: Build a binary with ``cargo build --release`` and run the binary: You have to set the environment variable ``POSTGRESQL_CONFIG`` and ``TELEGRAM_BOT_TOKEN`` for telegram and/or `MASTODON_URL` and `MASTODON_ACCESS_TOKEN` for mastodon.
+
+## BREAKING CHANGES
+The database changed from version `0.3.4` to version `0.4.0` from sqlite to postgresql. Use the [migration script](tools/migrate_sqlite_psql.py) to migrate.
 
 ## Feedback and contribution
 

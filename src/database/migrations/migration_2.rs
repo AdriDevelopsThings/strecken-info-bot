@@ -1,14 +1,8 @@
-use r2d2::PooledConnection;
-use r2d2_sqlite::{rusqlite::params, SqliteConnectionManager};
+use crate::database::{DbConnection, DbError};
 
-/// add trigger_warning_list column to user
-pub fn migrate(connection: &PooledConnection<SqliteConnectionManager>) {
+pub async fn migrate<'a>(connection: &DbConnection<'a>) -> Result<(), DbError> {
     connection
-        .execute(
-            "ALTER TABLE user
-                    ADD trigger_warning_list STRING DEFAULT \"\" NOT NULL;",
-            params![],
-        )
-        .unwrap();
-    connection.pragma_update(None, "user_version", 2).unwrap();
+        .execute("ALTER TABLE disruption ADD json JSONB", &[])
+        .await?;
+    Ok(())
 }

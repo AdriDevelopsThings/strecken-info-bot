@@ -1,4 +1,3 @@
-use r2d2_sqlite::rusqlite::params;
 use telexide::{api::types::SendMessage, prelude::*};
 
 use crate::database::Database;
@@ -6,36 +5,33 @@ use crate::database::Database;
 use super::{subscribe::subscribe_user, HashMapDatabase};
 
 async fn send_tw_help(database: Database, context: &Context, message: &Message) -> CommandResult {
-    let connection = database.get_connection().unwrap();
-    let trigger_warnings: String = connection
-        .query_row(
-            "SELECT trigger_warning_list FROM user WHERE chat_id=?",
-            params![message.chat.get_id()],
-            |row| row.get(0),
+    let connection = database.get_connection().await.unwrap();
+    let trigger_warnings = connection
+        .query_one(
+            "SELECT trigger_warnings FROM telegram_user WHERE chat_id=$1",
+            &[&message.chat.get_id()],
         )
-        .unwrap();
-    let trigger_warnings = trigger_warnings
-        .split(',')
-        .filter(|r| !r.is_empty())
-        .collect::<Vec<&str>>()
-        .join(",");
+        .await
+        .unwrap()
+        .get::<_, Vec<String>>(0)
+        .join(", ");
     context
         .api
         .send_message(SendMessage::new(
             message.chat.get_id().into(),
             format!(
-                "Configure your trigger warnings by using /tw add your_triggering_word
-You can remove a trigger warning by using /tw remove your_triggering_word
-You also can remove all trigger warnings by using /tw clear
-These trigger warnings are configured for your user: {trigger_warnings}.
-All disruptions that contain a triggering word will be sent as spoilers to you."
+                "Füge ein Wort zu den Trigger Warnings mit /tw add WORT hinzu.
+Du kannst eine Trigger Warning mit /tw remove WORT wieder entfernen.
+Mit /tw clear kannst du alle Trigger Warnings wieder entfernen.
+Diese Trigger Warnings hast du bereits konfiguriert: {trigger_warnings}.
+Alle Störungen, die ein Wort aus den konfigurierten Trigger Warnings enthalten, werden dir als Spoiler geschickt."
             ),
         ))
         .await?;
     Ok(())
 }
 
-#[command(description = "Edit your comma sperated trigger warning list")]
+#[command(description = "Bearbeite deine Trigger Warnings")]
 async fn tw(context: Context, message: Message) -> CommandResult {
     let database = context
         .data
@@ -43,23 +39,19 @@ async fn tw(context: Context, message: Message) -> CommandResult {
         .get::<HashMapDatabase>()
         .unwrap()
         .clone();
-    let connection = database.get_connection().unwrap();
-    subscribe_user(&connection, message.chat.get_id());
+    let connection = database.get_connection().await.unwrap();
+    subscribe_user(&connection, message.chat.get_id()).await;
     let message_text = message.get_text().unwrap();
     let args = message_text.split(' ').collect::<Vec<&str>>();
 
-    let trigger_warnings: String = connection
-        .query_row(
-            "SELECT trigger_warning_list FROM user WHERE chat_id=?",
-            params![message.chat.get_id()],
-            |row| row.get(0),
+    let mut trigger_warnings: Vec<String> = connection
+        .query_one(
+            "SELECT trigger_warnings FROM telegram_user WHERE chat_id=$1",
+            &[&message.chat.get_id()],
         )
-        .unwrap();
-    let mut trigger_warnings = trigger_warnings
-        .split(',')
-        .map(|s| s.to_owned())
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<String>>();
+        .await
+        .unwrap()
+        .get(0);
 
     if args.len() == 1 {
         send_tw_help(database.clone(), &context, &message).await?;
@@ -114,9 +106,10 @@ async fn tw(context: Context, message: Message) -> CommandResult {
 
         connection
             .execute(
-                "UPDATE user SET trigger_warning_list=? WHERE chat_id=?",
-                params![trigger_warnings.join(","), message.chat.get_id()],
+                "UPDATE telegram_user SET trigger_warnings=$1 WHERE chat_id=$2",
+                &[&trigger_warnings, &message.chat.get_id()],
             )
+            .await
             .unwrap();
     }
     Ok(())

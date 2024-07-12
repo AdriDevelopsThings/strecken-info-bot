@@ -1,47 +1,39 @@
 use log::info;
-use r2d2::PooledConnection;
-use r2d2_sqlite::SqliteConnectionManager;
+
+use super::DbConnection;
 
 mod migration_1;
 mod migration_2;
-mod migration_3;
-mod migration_4;
-mod migration_5;
-mod migration_6;
 
-type MigrationFunction = fn(&PooledConnection<SqliteConnectionManager>);
+pub async fn run_migrations(connection: DbConnection<'_>) {
+    connection
+        .execute(
+            "CREATE TABLE IF NOT EXISTS migration(id SMALLINT NOT NULL PRIMARY KEY)",
+            &[],
+        )
+        .await
+        .expect("Error while creating migration table");
 
-static MIGRATIONS: &[(i32, MigrationFunction)] = &[
-    (1, migration_1::migrate),
-    (2, migration_2::migrate),
-    (3, migration_3::migrate),
-    (4, migration_4::migrate),
-    (5, migration_5::migrate),
-    (6, migration_6::migrate),
-];
-
-fn run_migration(
-    connection: &PooledConnection<SqliteConnectionManager>,
-    migration_number: i32,
-    migration_function: MigrationFunction,
-) {
-    let user_version: i32 = connection
-        .pragma_query_value(None, "user_version", |row| row.get(0))
-        .unwrap();
-    if user_version < migration_number {
-        if migration_number - user_version > 1 {
-            panic!("Invalid database migration sequence, this migration could break your database");
+    for migration_number in 1_i16..3_i16 {
+        if connection
+            .query_opt("SELECT id FROM migration WHERE id=$1", &[&migration_number])
+            .await
+            .expect("Error while checking migration")
+            .is_some()
+        {
+            continue;
         }
         info!("Running database migration {migration_number}");
-        migration_function(connection);
-        connection
-            .pragma_update(None, "user_version", migration_number)
-            .unwrap();
-    }
-}
+        match migration_number {
+            1 => migration_1::migrate(&connection).await,
+            2 => migration_2::migrate(&connection).await,
+            _ => unreachable!(),
+        }
+        .expect("Error while running migration");
 
-pub fn run_migrations(connection: &PooledConnection<SqliteConnectionManager>) {
-    for (migration_number, migration_function) in MIGRATIONS.iter() {
-        run_migration(connection, *migration_number, *migration_function);
+        connection
+            .execute("INSERT INTO migration(id) VALUES($1)", &[&migration_number])
+            .await
+            .expect("Error while updating migration");
     }
 }

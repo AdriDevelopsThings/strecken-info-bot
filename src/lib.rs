@@ -1,14 +1,14 @@
-mod cleaning;
+mod change;
 mod cli;
 mod components;
 mod database;
+mod error;
 mod fetcher;
 mod filter;
 mod format;
 #[cfg(feature = "metrics")]
 mod metrics;
 
-pub use cleaning::start_cleaning;
 #[cfg(feature = "mastodon")]
 pub use cli::clear_toots;
 pub use cli::reset_disruptions;

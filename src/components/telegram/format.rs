@@ -6,14 +6,14 @@ use crate::format::{
     partial_format::{get_cause, get_location, get_product_effects, get_times, is_expired},
 };
 
-pub(super) fn format(disruption: &Disruption, changed: bool) -> String {
+pub(super) fn format(disruption: &Disruption, update: bool) -> String {
     let head = format!(
         "{}\n{}",
         get_cause(disruption),
         get_product_effects(disruption)
     );
     let text = disruption.text.clone();
-    let prefix = match changed {
+    let prefix = match update {
         true => {
             if is_expired(disruption) {
                 "Beendet: "
