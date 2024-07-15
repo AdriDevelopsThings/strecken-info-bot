@@ -21,10 +21,7 @@ pub(super) fn format(disruption: &Disruption, changes: &[DisruptionPart], update
         }
     };
 
-    let mut str = prefix.to_string();
-    if changes.contains(&DisruptionPart::Locations) {
-        str += &format!("{}\n", get_location(disruption, Some(8)));
-    }
+    let mut str = format!("{prefix}{}\n", get_location(disruption, Some(8)));
     if changes.contains(&DisruptionPart::Cause) {
         str += &format!("{}\n", format_text(&get_cause(disruption)));
     }
