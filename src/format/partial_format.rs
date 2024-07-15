@@ -42,7 +42,10 @@ pub fn get_cause(disruption: &Disruption) -> String {
         "{}{}",
         disruption.cause,
         match &disruption.subcause {
-            Some(subcause) => format!(" - {subcause}"),
+            Some(subcause) => match subcause.is_empty() {
+                true => String::new(), // subcause = ""
+                false => format!(" - {subcause}"),
+            },
             None => String::new(),
         }
     )
