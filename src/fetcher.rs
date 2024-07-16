@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, time::Duration};
 
 use log::{debug, error};
 use strecken_info::{
@@ -43,7 +43,7 @@ pub fn start_fetching(database: Database, components: Components) {
             debug!("Fetched new disruptions");
             tx.send(disruptions).unwrap();
             revision = revision_ctx
-                .wait_for_new_revision_filtered(true)
+                .wait_for_new_revision_filtered_timeout(true, Some(Duration::from_secs(60 * 10)))
                 .await
                 .expect("Error while getting new revision");
         }
