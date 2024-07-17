@@ -1,28 +1,17 @@
-use strecken_info::disruptions::{Disruption, TrackRestriction};
+use strecken_info::disruptions::Disruption;
 
 use crate::{
     change::DisruptionPart,
     format::{
         format_text,
-        partial_format::{get_cause, get_location, get_product_effects, get_times, is_expired},
+        partial_format::{get_cause, get_location, get_prefix, get_product_effects, get_times},
     },
 };
 
 pub(super) fn format(disruption: &Disruption, changes: &[DisruptionPart], update: bool) -> String {
-    let prefix = if is_expired(disruption) {
-        "✅ Beendet: "
-    } else {
-        match update {
-            true => "Update: ",
-            false => match disruption.track_restriction {
-                TrackRestriction::Severe => "❌ ",
-                TrackRestriction::Slight => "⚠️ ",
-            },
-        }
-    };
-
     let mut str = format!(
-        "{prefix}{}\n{}\n",
+        "{} {}\n{}\n",
+        get_prefix(disruption, update),
         get_location(disruption, Some(8)),
         format_text(&get_cause(disruption))
     );

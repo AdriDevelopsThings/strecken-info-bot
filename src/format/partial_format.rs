@@ -1,6 +1,6 @@
 use chrono::Utc;
 use chrono_tz::Europe::Berlin;
-use strecken_info::disruptions::{Disruption, Product};
+use strecken_info::disruptions::{Disruption, Product, TrackRestriction};
 
 pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> String {
     let mut locations = disruption
@@ -86,4 +86,18 @@ pub fn get_times(disruption: &Disruption) -> String {
 
 pub fn is_expired(disruption: &Disruption) -> bool {
     disruption.expired || Utc::now() > disruption.period.end.and_local_timezone(Berlin).unwrap()
+}
+
+pub fn get_prefix(disruption: &Disruption, update: bool) -> &'static str {
+    if is_expired(disruption) {
+        "✅ Beendet:"
+    } else {
+        match update {
+            true => "Update:",
+            false => match disruption.track_restriction {
+                TrackRestriction::Severe => "❌",
+                TrackRestriction::Slight => "⚠️",
+            },
+        }
+    }
 }
