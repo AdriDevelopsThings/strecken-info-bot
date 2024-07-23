@@ -5,14 +5,15 @@ use crate::database::DbConnection;
 
 use super::HashMapDatabase;
 
-pub async fn subscribe_user<'a>(connection: &DbConnection<'a>, chat_id: i64) {
+pub async fn subscribe_user<'a>(connection: &DbConnection<'a>, chat_id: i64) -> i32 {
     connection
-        .execute(
-            "INSERT INTO telegram_user(chat_id) VALUES($1) ON CONFLICT(chat_id) DO NOTHING",
+        .query_one(
+            "INSERT INTO telegram_user(chat_id) VALUES($1) ON CONFLICT(chat_id) DO UPDATE SET chat_id=EXCLUDED.chat_id RETURNING id",
             &[&chat_id],
         )
         .await
-        .unwrap();
+        .unwrap()
+        .get(0)
 }
 
 #[command(description = "Starte den Bot und abonniere Störungsmeldungen")]

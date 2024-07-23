@@ -1,16 +1,25 @@
 use bb8_postgres::tokio_postgres::Row;
+use strecken_info::disruptions::Disruption;
+
+use super::Filter;
 
 pub struct User {
     pub chat_id: i64,
     pub trigger_warnings: Vec<String>,
+    pub filters: Vec<Filter>,
 }
 
 impl User {
-    pub fn from_row(value: &Row) -> Self {
-        Self {
+    pub fn from_row(value: &Row) -> Result<Self, serde_json::Error> {
+        Ok(Self {
             chat_id: value.get(1),
             trigger_warnings: value.get::<_, Vec<String>>(2),
-        }
+            filters: value
+                .get::<_, Vec<serde_json::Value>>(4)
+                .into_iter()
+                .map(serde_json::from_value::<Filter>)
+                .collect::<Result<Vec<Filter>, serde_json::Error>>()?,
+        })
     }
 
     pub fn is_trigger(&self, message: &str) -> Option<String> {
@@ -21,5 +30,33 @@ impl User {
             }
         }
         None
+    }
+
+    pub fn is_filtered(&self, disruption: &Disruption) -> bool {
+        if self.filters.is_empty() {
+            return false;
+        }
+
+        !self
+            .filters
+            .iter()
+            .map(|filter| {
+                match filter {
+                    Filter::Location { x, y, range } => {
+                        for coordinate in &disruption.coordinates {
+                            if !coordinate.x.is_normal() || !coordinate.y.is_normal() {
+                                continue;
+                            }
+
+                            // distance between (x, y) and coordinate <= range
+                            return f64::sqrt(
+                                f64::powi(x - coordinate.x, 2) + f64::powi(y - coordinate.y, 2),
+                            ) <= (*range as f64 * 1000f64); // range from km to m
+                        }
+                    }
+                }
+                true
+            })
+            .all(|x| x)
     }
 }

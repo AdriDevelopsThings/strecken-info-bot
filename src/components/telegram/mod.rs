@@ -1,7 +1,13 @@
+use std::{collections::HashMap, sync::Arc};
+
 use telexide::{create_framework, prelude::ClientBuilder, Client};
-use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
+use tokio::{
+    sync::{mpsc::UnboundedReceiver, Mutex},
+    task::JoinHandle,
+};
 use typemap_rev::TypeMapKey;
 
+use filter::*;
 use info::*;
 use subscribe::*;
 use tw::*;
@@ -12,6 +18,7 @@ use self::message_sender::MessageSender;
 
 use super::DisruptionInformation;
 
+mod filter;
 mod format;
 mod info;
 mod message_sender;
@@ -24,6 +31,17 @@ impl TypeMapKey for HashMapDatabase {
     type Value = Database;
 }
 
+#[derive(Clone)]
+enum Expecting {
+    Location,
+    LocationRange { lon: f64, lat: f64 },
+}
+
+struct HashMapExpecting;
+impl TypeMapKey for HashMapExpecting {
+    type Value = Arc<Mutex<HashMap<i32, Expecting>>>;
+}
+
 pub fn create_client(bot_token: String) -> Client {
     ClientBuilder::new()
         .set_token(&bot_token)
@@ -34,8 +52,10 @@ pub fn create_client(bot_token: String) -> Client {
             version,
             git,
             feedback,
-            tw
+            tw,
+            filter
         ))
+        .add_handler_func(callback)
         .build()
 }
 
@@ -50,6 +70,7 @@ pub async fn run_bot(
     {
         let mut data = client.data.write();
         data.insert::<HashMapDatabase>(database.clone());
+        data.insert::<HashMapExpecting>(Arc::new(Mutex::new(HashMap::new())));
     }
     let message_sender = MessageSender::new(api_client, database);
     [

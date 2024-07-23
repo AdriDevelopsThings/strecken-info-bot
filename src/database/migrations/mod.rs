@@ -4,6 +4,7 @@ use super::DbConnection;
 
 mod migration_1;
 mod migration_2;
+mod migration_3;
 
 pub async fn run_migrations(connection: DbConnection<'_>) {
     connection
@@ -14,7 +15,7 @@ pub async fn run_migrations(connection: DbConnection<'_>) {
         .await
         .expect("Error while creating migration table");
 
-    for migration_number in 1_i16..3_i16 {
+    for migration_number in 1_i16..4_i16 {
         if connection
             .query_opt("SELECT id FROM migration WHERE id=$1", &[&migration_number])
             .await
@@ -27,6 +28,7 @@ pub async fn run_migrations(connection: DbConnection<'_>) {
         match migration_number {
             1 => migration_1::migrate(&connection).await,
             2 => migration_2::migrate(&connection).await,
+            3 => migration_3::migrate(&connection).await,
             _ => unreachable!(),
         }
         .expect("Error while running migration");

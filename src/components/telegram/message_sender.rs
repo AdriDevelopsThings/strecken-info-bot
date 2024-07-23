@@ -75,16 +75,20 @@ impl MessageSender {
 
             let connection = self.database.get_connection().await.unwrap();
             let statement = connection
-                .prepare("SELECT id, chat_id, trigger_warnings, show_planned_disruptions FROM telegram_user")
+                .prepare("SELECT id, chat_id, trigger_warnings, show_planned_disruptions, filters FROM telegram_user")
                 .await?;
             let users = connection
                 .query(&statement, &[])
                 .await?
                 .iter()
                 .map(User::from_row)
-                .collect::<Vec<User>>();
+                .collect::<Result<Vec<User>, serde_json::Error>>()?;
 
             for user in users {
+                if user.is_filtered(&disruption.disruption) {
+                    continue;
+                }
+
                 let message = if let Some(trigger) = user.is_trigger(&message) {
                     format!("TW: {trigger}\n<span class=\"tg-spoiler\">{message}</span>")
                 } else {

@@ -15,7 +15,7 @@ path = "src/main.rs"
 default = ["metrics", "mastodon", "telegram"]
 metrics = ["dep:axum"]
 mastodon = ["dep:megalodon"]
-telegram = ["dep:telexide"]
+telegram = ["dep:telexide", "dep:serde"]
 
 [dependencies]
 axum = { version = "0", optional = true, default-features = false, features = ["http1", "tokio", "tower-log"]}
@@ -33,6 +33,7 @@ md5 = "0"
 megalodon = { version = "0", optional = true }
 regex = "1"
 reqwest = { version = "0", default-features = false, features = ["rustls-tls"] }
+serde = { version = "1", features = ["derive"], optional = true} # serde is needed for telegram user filters
 serde_json = "1"
 strecken-info = { version = "1", default-features = false, features = ["rustls-tls"] }
 telexide = { git = "https://github.com/AdriDevelopsThings/telexide", branch = "fixes", optional = true}
