@@ -113,23 +113,21 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
                     "Du hast bisher keine Filter konfiguriert.",
                 ))
                 .await?;
-            return Ok(());
+        } else {
+            let mut markup = InlineKeyboardMarkup::new();
+            for filter in filters {
+                let mut btn = InlineKeyboardButton::new(filter.get_type(), false);
+                btn.callback_data = Some(format!("{REMOVE_FILTER_PREFIX}{}", filter.get_type()));
+                markup.add_button(btn);
+            }
+
+            let mut send_message = SendMessage::new(
+                message.chat.get_id().into(),
+                "Welcher Filter soll entfernt werden?",
+            );
+            send_message.reply_markup = Some(ReplyMarkup::InlineKeyboardMarkup(markup));
+            context.api.send_message(send_message).await?;
         }
-
-        let mut markup = InlineKeyboardMarkup::new();
-
-        for filter in filters {
-            let mut btn = InlineKeyboardButton::new(filter.get_type(), false);
-            btn.callback_data = Some(format!("{REMOVE_FILTER_PREFIX}{}", filter.get_type()));
-            markup.add_button(btn);
-        }
-
-        let mut send_message = SendMessage::new(
-            message.chat.get_id().into(),
-            "Welcher Filter soll entfernt werden?",
-        );
-        send_message.reply_markup = Some(ReplyMarkup::InlineKeyboardMarkup(markup));
-        context.api.send_message(send_message).await?;
     } else if data == LOCATION {
         // add a location based filter
         let expecting_arc = context
