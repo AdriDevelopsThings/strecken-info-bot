@@ -104,6 +104,18 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
             .into_iter()
             .map(serde_json::from_value::<Filter>)
             .collect::<Result<Vec<Filter>, serde_json::Error>>()?;
+
+        if filters.is_empty() {
+            context
+                .api
+                .send_message(SendMessage::new(
+                    message.chat.get_id().into(),
+                    "Du hast bisher keine Filter konfiguriert.",
+                ))
+                .await?;
+            return Ok(());
+        }
+
         let mut markup = InlineKeyboardMarkup::new();
 
         for filter in filters {
