@@ -42,10 +42,20 @@ pub fn start_fetching(database: Database, components: Components) {
 
             debug!("Fetched new disruptions");
             tx.send(disruptions).unwrap();
-            revision = revision_ctx
+            revision = match revision_ctx
                 .wait_for_new_revision_filtered_timeout(true, Some(Duration::from_secs(60 * 10)))
                 .await
-                .expect("Error while getting new revision");
+            {
+                Ok(revision) => revision,
+                Err(_) => {
+                    revision_ctx = RevisionContext::connect()
+                        .await
+                        .expect("Error while trying to reconnect to websocket");
+                    revision_ctx.get_first_revision().await.expect(
+                        "Error while trying to reconnect to websocket and get first revision",
+                    )
+                }
+            }
         }
     });
 
