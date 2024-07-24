@@ -10,7 +10,7 @@ pub async fn show_users(database: Database) {
     );
     let connection = database.get_connection().await.unwrap();
     let rows = connection
-        .query("SELECT chat_id FROM telegram_user", &[])
+        .query("SELECT id, chat_id FROM telegram_user", &[])
         .await
         .unwrap();
     println!("{} chats are currently registered:\n", rows.len());
@@ -18,10 +18,11 @@ pub async fn show_users(database: Database) {
         let chat = client
             .api_client
             .get_chat(GetChat {
-                chat_id: row.get::<_, i64>(0).into(),
+                chat_id: row.get::<_, i64>(1).into(),
             })
             .await
             .unwrap();
+        print!("{}: ", row.get::<_, i32>(0));
         match chat {
             Chat::Private(chat) => println!(
                 "User {} {} ({})",
