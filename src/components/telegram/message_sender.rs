@@ -75,7 +75,7 @@ impl MessageSender {
 
             let connection = self.database.get_connection().await.unwrap();
             let statement = connection
-                .prepare("SELECT id, chat_id, trigger_warnings, show_planned_disruptions, filters FROM telegram_user")
+                .prepare("SELECT id, chat_id, trigger_warnings, show_planned_disruptions, filters, one_filter_enough FROM telegram_user")
                 .await?;
             let users = connection
                 .query(&statement, &[])

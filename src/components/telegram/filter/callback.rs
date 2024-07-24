@@ -14,7 +14,10 @@ use telexide::{
 use crate::components::telegram::{subscribe_user, Expecting, HashMapDatabase, HashMapExpecting};
 
 use super::{
-    consts::{ADD_FILTER, LOCATION, REMOVE_FILTER, REMOVE_FILTER_PREFIX, SHOW_FILTER},
+    consts::{
+        ADD_FILTER, CHANGE_FILTER_BEHAVIOUR, CHANGE_FILTER_BEHAVIOUR_ALL,
+        CHANGE_FILTER_BEHAVIOUR_ONE, LOCATION, REMOVE_FILTER, REMOVE_FILTER_PREFIX, SHOW_FILTER,
+    },
     epsg::epsg_4326_to_epsg_3857,
     model::Filter,
 };
@@ -128,6 +131,52 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
             send_message.reply_markup = Some(ReplyMarkup::InlineKeyboardMarkup(markup));
             context.api.send_message(send_message).await?;
         }
+    } else if data == CHANGE_FILTER_BEHAVIOUR {
+        let one_filter_enough: bool = connection
+            .query_one(
+                "SELECT one_filter_enough FROM telegram_user WHERE id=$1",
+                &[&user_id],
+            )
+            .await?
+            .get(0);
+
+        let mut all_btn = InlineKeyboardButton::new("Alle", false);
+        all_btn.callback_data = Some(CHANGE_FILTER_BEHAVIOUR_ALL.to_string());
+
+        let mut one_btn = InlineKeyboardButton::new("Einer", false);
+        one_btn.callback_data = Some(CHANGE_FILTER_BEHAVIOUR_ONE.to_string());
+
+        let mut markup = InlineKeyboardMarkup::new();
+        markup.add_button(all_btn);
+        markup.add_button(one_btn);
+
+        let mut send_message = SendMessage::new(message.chat.get_id().into(), format!("Soll ich dir eine Störung nur dann schicken, wenn ALLE oder mindestens EIN Filter erfüllt ist?\nAktuell ist eingestellt: {}", match one_filter_enough {
+            true => "Einer",
+            false => "Alle"
+        }));
+        send_message.reply_markup = Some(ReplyMarkup::InlineKeyboardMarkup(markup));
+        context.api.send_message(send_message).await?;
+    } else if data == CHANGE_FILTER_BEHAVIOUR_ALL || data == CHANGE_FILTER_BEHAVIOUR_ONE {
+        connection
+            .execute(
+                "UPDATE telegram_user SET one_filter_enough=$1 WHERE id=$2",
+                &[
+                    &match data.as_str() {
+                        CHANGE_FILTER_BEHAVIOUR_ALL => false,
+                        CHANGE_FILTER_BEHAVIOUR_ONE => true,
+                        _ => unreachable!(),
+                    },
+                    &user_id,
+                ],
+            )
+            .await?;
+        context
+            .api
+            .send_message(SendMessage::new(
+                message.chat.get_id().into(),
+                "Das Filterverhalten wurde erfolgreich angepasst.",
+            ))
+            .await?;
     } else if data == LOCATION {
         // add a location based filter
         let expecting_arc = context
