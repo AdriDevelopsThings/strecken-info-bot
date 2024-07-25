@@ -8,4 +8,5 @@ mod model;
 
 pub(super) use callback::callback;
 pub(super) use command::filter_COMMAND;
-pub(super) use model::Filter;
+pub use epsg::{epsg_3857_to_epsg_4326, epsg_4326_distance_km};
+pub use model::Filter;

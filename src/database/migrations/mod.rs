@@ -6,6 +6,7 @@ mod migration_1;
 mod migration_2;
 mod migration_3;
 mod migration_4;
+mod migration_5;
 
 pub async fn run_migrations(connection: DbConnection<'_>) {
     connection
@@ -16,7 +17,7 @@ pub async fn run_migrations(connection: DbConnection<'_>) {
         .await
         .expect("Error while creating migration table");
 
-    for migration_number in 1_i16..5_i16 {
+    for migration_number in 1_i16..6_i16 {
         if connection
             .query_opt("SELECT id FROM migration WHERE id=$1", &[&migration_number])
             .await
@@ -31,6 +32,7 @@ pub async fn run_migrations(connection: DbConnection<'_>) {
             2 => migration_2::migrate(&connection).await,
             3 => migration_3::migrate(&connection).await,
             4 => migration_4::migrate(&connection).await,
+            5 => migration_5::migrate(&connection).await,
             _ => unreachable!(),
         }
         .expect("Error while running migration");

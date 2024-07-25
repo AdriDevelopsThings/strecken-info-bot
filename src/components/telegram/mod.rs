@@ -26,6 +26,9 @@ mod subscribe;
 mod tw;
 mod user;
 
+pub use filter::epsg_3857_to_epsg_4326;
+pub use filter::Filter;
+
 struct HashMapDatabase;
 impl TypeMapKey for HashMapDatabase {
     type Value = Database;

@@ -18,7 +18,6 @@ use super::{
         ADD_FILTER, CHANGE_FILTER_BEHAVIOUR, CHANGE_FILTER_BEHAVIOUR_ALL,
         CHANGE_FILTER_BEHAVIOUR_ONE, LOCATION, REMOVE_FILTER, REMOVE_FILTER_PREFIX, SHOW_FILTER,
     },
-    epsg::epsg_4326_to_epsg_3857,
     model::Filter,
 };
 
@@ -280,8 +279,7 @@ async fn callback_message(context: Context, message: Message) -> Result<(), Box<
                     message.chat.get_id().into(),
                         match content.parse::<u16>() {
                             Ok(range) => {
-                                let (x, y) = epsg_4326_to_epsg_3857(*lon, *lat);
-                                connection.execute("UPDATE telegram_user SET filters=array_append(filters, $1) WHERE id=$2", &[&serde_json::to_value(Filter::Location { x, y, range }).unwrap(), &user_id]).await?;
+                                connection.execute("UPDATE telegram_user SET filters=array_append(filters, $1) WHERE id=$2", &[&serde_json::to_value(Filter::Location { x: *lon, y: *lat, range }).unwrap(), &user_id]).await?;
                                 expectings.remove_entry(&user_id);
                                 "Der Filter wurde erfolgreich erstellt."
                             }

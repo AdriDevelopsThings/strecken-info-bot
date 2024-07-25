@@ -1,7 +1,7 @@
 use bb8_postgres::tokio_postgres::Row;
 use strecken_info::disruptions::Disruption;
 
-use super::Filter;
+use super::{epsg_3857_to_epsg_4326, epsg_4326_distance_km, Filter};
 
 pub struct User {
     pub chat_id: i64,
@@ -39,22 +39,23 @@ impl User {
             return false;
         }
 
-        let mut filters_mapped = self.filters.iter().map(|filter| {
-            match filter {
-                Filter::Location { x, y, range } => {
-                    for coordinate in &disruption.coordinates {
+        let mut filters_mapped = self.filters.iter().map(|filter| match filter {
+            Filter::Location { x, y, range } => {
+                return disruption
+                    .coordinates
+                    .iter()
+                    .map(|coordinate| {
                         if !coordinate.x.is_normal() || !coordinate.y.is_normal() {
-                            continue;
+                            return false;
                         }
 
-                        // distance between (x, y) and coordinate <= range
-                        return f64::sqrt(
-                            f64::powi(x - coordinate.x, 2) + f64::powi(y - coordinate.y, 2),
-                        ) <= (*range as f64 * 1000f64); // range from km to m
-                    }
-                }
+                        let (coordinate_x, coordinate_y) =
+                            epsg_3857_to_epsg_4326(coordinate.x, coordinate.y);
+                        let distance = epsg_4326_distance_km(coordinate_x, coordinate_y, *x, *y);
+                        distance <= (*range as f64)
+                    })
+                    .any(|x| x);
             }
-            true
         });
 
         match self.one_filter_enough {
