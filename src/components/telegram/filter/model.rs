@@ -8,6 +8,7 @@ pub enum Filter {
     // coordinates in epsg 3857
     // range in kilometers
     Location { x: f64, y: f64, range: u16 },
+    OnlyCancellations,
 }
 
 impl Filter {
@@ -18,6 +19,7 @@ impl Filter {
                 y: _,
                 range: _,
             } => "Standort",
+            Self::OnlyCancellations => "Nur Ausfälle",
         }
     }
 }
@@ -32,6 +34,7 @@ impl Display for Filter {
                     self.get_type()
                 )
             }
+            Self::OnlyCancellations => write!(f, "{}", self.get_type()),
         }
     }
 }

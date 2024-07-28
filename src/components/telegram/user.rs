@@ -1,5 +1,5 @@
 use bb8_postgres::tokio_postgres::Row;
-use strecken_info::disruptions::Disruption;
+use strecken_info::disruptions::{Disruption, TrackRestriction};
 
 use super::{epsg_3857_to_epsg_4326, epsg_4326_distance_km, Filter};
 
@@ -56,6 +56,7 @@ impl User {
                     })
                     .any(|x| x);
             }
+            Filter::OnlyCancellations => disruption.track_restriction == TrackRestriction::Severe,
         });
 
         match self.one_filter_enough {

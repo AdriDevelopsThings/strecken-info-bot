@@ -16,7 +16,8 @@ use crate::components::telegram::{subscribe_user, Expecting, HashMapDatabase, Ha
 use super::{
     consts::{
         ADD_FILTER, CHANGE_FILTER_BEHAVIOUR, CHANGE_FILTER_BEHAVIOUR_ALL,
-        CHANGE_FILTER_BEHAVIOUR_ONE, LOCATION, REMOVE_FILTER, REMOVE_FILTER_PREFIX, SHOW_FILTER,
+        CHANGE_FILTER_BEHAVIOUR_ONE, LOCATION, ONLY_CANCELLATIONS, REMOVE_FILTER,
+        REMOVE_FILTER_PREFIX, SHOW_FILTER,
     },
     model::Filter,
 };
@@ -73,7 +74,7 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
                         "Du hast folgende Filter konfiguriert:\n{}",
                         filters
                             .iter()
-                            .map(|f| f.to_string())
+                            .map(|f| format!("- {f}"))
                             .collect::<Vec<String>>()
                             .join("\n")
                     ),
@@ -85,8 +86,12 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
         let mut loc_btn = InlineKeyboardButton::new("Umkreis um einen Standort", false);
         loc_btn.callback_data = Some(LOCATION.to_string());
 
+        let mut only_cancellations_btn = InlineKeyboardButton::new("Nur Ausfälle anzeigen", false);
+        only_cancellations_btn.callback_data = Some(ONLY_CANCELLATIONS.to_string());
+
         let mut markup = InlineKeyboardMarkup::new();
-        markup.add_button(loc_btn);
+        markup.add_row(vec![loc_btn]);
+        markup.add_row(vec![only_cancellations_btn]);
 
         let mut send_message = SendMessage::new(
             message.chat.get_id().into(),
@@ -187,6 +192,20 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
         let mut expecting = expecting_arc.lock().await;
         expecting.insert(user_id, Expecting::Location); // we expect the user to send us a location
         context.api.send_message(SendMessage::new(message.chat.get_id().into(), "Schicke mir nun einen Standort. Du kannst danach konfigurieren in welchem Radius um den Standort eine Störung liegen muss, damit ich sie dir schicke.")).await?;
+    } else if data == ONLY_CANCELLATIONS {
+        let filter = serde_json::to_value(Filter::OnlyCancellations).unwrap();
+        connection.execute("UPDATE telegram_user SET filters=array_append(filters, $1) WHERE id=$2 AND NOT filters @> $3", &[
+            &filter,
+            &user_id,
+            &vec![&filter]
+        ]).await?;
+        context
+            .api
+            .send_message(SendMessage::new(
+                message.chat.get_id().into(),
+                "Du erhälst nun nur noch Ausfälle (❌).",
+            ))
+            .await?;
     } else if data.starts_with(REMOVE_FILTER_PREFIX) {
         // remove a location, data will be like this: `{REMOVE_FILTER_PREFIX}{FILTER_TYPE}`
         let filter_type = data.replace(REMOVE_FILTER_PREFIX, "");

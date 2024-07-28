@@ -25,13 +25,17 @@ pub async fn migrate<'a>(connection: &DbConnection<'a>) -> Result<(), DbError> {
                 .into_iter()
                 .map(|filter| serde_json::from_value::<Filter>(filter).unwrap())
                 .map(|filter| {
-                    let Filter::Location {
+                    if let Filter::Location {
                         mut x,
                         mut y,
                         range,
-                    } = filter;
-                    (x, y) = epsg_3857_to_epsg_4326(x, y);
-                    Filter::Location { x, y, range }
+                    } = filter
+                    {
+                        (x, y) = epsg_3857_to_epsg_4326(x, y);
+                        Filter::Location { x, y, range }
+                    } else {
+                        filter
+                    }
                 });
             connection
                 .execute(

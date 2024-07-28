@@ -6,4 +6,5 @@ pub(super) const CHANGE_FILTER_BEHAVIOUR: &str = "change_filter_behaviour";
 pub(super) const CHANGE_FILTER_BEHAVIOUR_ALL: &str = "change_filter_behaviour_all";
 pub(super) const CHANGE_FILTER_BEHAVIOUR_ONE: &str = "change_filter_behaviour_one";
 pub(super) const LOCATION: &str = "location";
+pub(super) const ONLY_CANCELLATIONS: &str = "only_cancellations";
 pub(super) const REMOVE_FILTER_PREFIX: &str = "remove_";
