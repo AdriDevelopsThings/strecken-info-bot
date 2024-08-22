@@ -38,6 +38,7 @@ impl TypeMapKey for HashMapDatabase {
 enum Expecting {
     Location,
     LocationRange { lon: f64, lat: f64 },
+    RailwayManagement,
 }
 
 struct HashMapExpecting;

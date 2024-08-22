@@ -57,6 +57,10 @@ impl User {
                     .any(|x| x);
             }
             Filter::OnlyCancellations => disruption.track_restriction == TrackRestriction::Severe,
+            Filter::RailwayManagement { letter } => disruption
+                .stations
+                .iter()
+                .any(|station| station.ril100.starts_with(*letter)),
         });
 
         match self.one_filter_enough {

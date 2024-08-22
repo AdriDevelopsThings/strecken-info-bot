@@ -15,9 +15,9 @@ use crate::components::telegram::{subscribe_user, Expecting, HashMapDatabase, Ha
 
 use super::{
     consts::{
-        ADD_FILTER, CHANGE_FILTER_BEHAVIOUR, CHANGE_FILTER_BEHAVIOUR_ALL,
-        CHANGE_FILTER_BEHAVIOUR_ONE, LOCATION, ONLY_CANCELLATIONS, REMOVE_FILTER,
-        REMOVE_FILTER_PREFIX, SHOW_FILTER,
+        ADD_FILTER, AVAILABLE_RIL100_RAILWAY_MANAGEMENTS, CHANGE_FILTER_BEHAVIOUR,
+        CHANGE_FILTER_BEHAVIOUR_ALL, CHANGE_FILTER_BEHAVIOUR_ONE, LOCATION, ONLY_CANCELLATIONS,
+        RAILWAY_MANAGEMENT, REMOVE_FILTER, REMOVE_FILTER_PREFIX, SHOW_FILTER,
     },
     model::Filter,
 };
@@ -89,9 +89,13 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
         let mut only_cancellations_btn = InlineKeyboardButton::new("Nur Ausfälle anzeigen", false);
         only_cancellations_btn.callback_data = Some(ONLY_CANCELLATIONS.to_string());
 
+        let mut railway_management_btn = InlineKeyboardButton::new("Nach Bahndirektion", false);
+        railway_management_btn.callback_data = Some(RAILWAY_MANAGEMENT.to_string());
+
         let mut markup = InlineKeyboardMarkup::new();
         markup.add_row(vec![loc_btn]);
         markup.add_row(vec![only_cancellations_btn]);
+        markup.add_row(vec![railway_management_btn]);
 
         let mut send_message = SendMessage::new(
             message.chat.get_id().into(),
@@ -206,6 +210,16 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
                 "Du erhälst nun nur noch Ausfälle (❌).",
             ))
             .await?;
+    } else if data == RAILWAY_MANAGEMENT {
+        let expecting_arc = context
+            .data
+            .write()
+            .get::<HashMapExpecting>()
+            .unwrap()
+            .clone();
+        let mut expecting = expecting_arc.lock().await;
+        expecting.insert(user_id, Expecting::RailwayManagement); // we expect the user to send us a railway management letter
+        context.api.send_message(SendMessage::new(message.chat.get_id().into(), "Schicke mir nun den Buchstaben der Bahndirektion. Das ist der erste Buchstabe des DS100/RIL100 Kürzels.")).await?;
     } else if data.starts_with(REMOVE_FILTER_PREFIX) {
         // remove a location, data will be like this: `{REMOVE_FILTER_PREFIX}{FILTER_TYPE}`
         let filter_type = data.replace(REMOVE_FILTER_PREFIX, "");
@@ -306,6 +320,51 @@ async fn callback_message(context: Context, message: Message) -> Result<(), Box<
                                 "Der Radius sollte schon eine Zahl sein."
                             }
                 })).await?;
+            } else {
+                // expecting text, but message is not text
+                return Ok(());
+            }
+        } else if matches!(expecting, Expecting::RailwayManagement) {
+            if let MessageContent::Text {
+                content,
+                entities: _,
+            } = message.content
+            {
+                let first_char = content.chars().next();
+                if content.len() > 1
+                    || !first_char
+                        .map(|c| {
+                            AVAILABLE_RIL100_RAILWAY_MANAGEMENTS.contains(&c.to_ascii_uppercase())
+                        })
+                        .unwrap_or(false)
+                {
+                    context.api.send_message(SendMessage::new(
+                        message.chat.get_id().into(),
+                        format!("Bitte schicke mir den ersten Buchstaben einer Bahndirektion. Zur Verfügung stehen: {}", AVAILABLE_RIL100_RAILWAY_MANAGEMENTS.iter().map(|c| c.to_string()).collect::<Vec<String>>().join(", ")))
+                    ).await?;
+                    return Ok(());
+                }
+
+                connection
+                    .execute(
+                        "UPDATE telegram_user SET filters=array_append(filters, $1) WHERE id=$2",
+                        &[
+                            &serde_json::to_value(Filter::RailwayManagement {
+                                letter: first_char.unwrap(),
+                            })
+                            .unwrap(),
+                            &user_id,
+                        ],
+                    )
+                    .await?;
+                expectings.remove_entry(&user_id);
+                context
+                    .api
+                    .send_message(SendMessage::new(
+                        message.chat.get_id().into(),
+                        "Der Filter wurde erfolgreich erstellt.",
+                    ))
+                    .await?;
             } else {
                 // expecting text, but message is not text
                 return Ok(());

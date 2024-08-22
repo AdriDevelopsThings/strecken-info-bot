@@ -9,6 +9,8 @@ pub enum Filter {
     // range in kilometers
     Location { x: f64, y: f64, range: u16 },
     OnlyCancellations,
+    // "Bahndirektion" (The first letter of ril100)
+    RailwayManagement { letter: char },
 }
 
 impl Filter {
@@ -20,6 +22,7 @@ impl Filter {
                 range: _,
             } => "Standort",
             Self::OnlyCancellations => "Nur Ausfälle",
+            Self::RailwayManagement { letter: _ } => "Bahndirektion",
         }
     }
 }
@@ -35,6 +38,9 @@ impl Display for Filter {
                 )
             }
             Self::OnlyCancellations => write!(f, "{}", self.get_type()),
+            Self::RailwayManagement { letter } => {
+                write!(f, "{}: RIL100 beginnt mit {letter}", self.get_type())
+            }
         }
     }
 }
