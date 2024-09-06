@@ -21,6 +21,13 @@ pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> St
         })
         .collect::<Vec<String>>();
 
+    locations.extend(disruption.sections.iter().map(|section| {
+        format!(
+            "{} ({}) - {} ({})",
+            section.from.name, section.from.ril100, section.to.name, section.to.ril100
+        )
+    }));
+
     locations.extend(disruption.regions.iter().cloned());
     locations.dedup();
     if locations.is_empty() {

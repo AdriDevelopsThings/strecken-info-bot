@@ -1853,9 +1853,9 @@ checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
 name = "strecken-info"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "752d898b06b79bbd64e4fee13f213da2ed6b46677254a24c89665ac643a20c7f"
+checksum = "9e5b411dd119a6437759b6fe4bdf8f60eea6ba5c4db0aa3a60dbbcc82f7c4d87"
 dependencies = [
  "chrono",
  "futures-util",
