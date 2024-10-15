@@ -2,29 +2,29 @@ use chrono::Utc;
 use chrono_tz::Europe::Berlin;
 use strecken_info::disruptions::{Disruption, Product, TrackRestriction};
 
+fn format_station(station: &str) -> String {
+    station
+        .trim()
+        .split(' ')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<&str>>()
+        .join(" ")
+}
+
 pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> String {
     let mut locations = disruption
         .stations
         .iter()
-        .map(|station| {
-            format!(
-                "{} ({})",
-                station
-                    .name
-                    .trim()
-                    .split(' ')
-                    .filter(|s| !s.is_empty())
-                    .collect::<Vec<&str>>()
-                    .join(" "),
-                station.ril100
-            )
-        })
+        .map(|station| format!("{} ({})", format_station(&station.name), station.ril100))
         .collect::<Vec<String>>();
 
     locations.extend(disruption.sections.iter().map(|section| {
         format!(
             "{} ({}) - {} ({})",
-            section.from.name, section.from.ril100, section.to.name, section.to.ril100
+            format_station(&section.from.name),
+            section.from.ril100,
+            format_station(&section.to.name),
+            section.to.ril100
         )
     }));
 
