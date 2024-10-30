@@ -8,6 +8,10 @@ mod filter;
 mod format;
 #[cfg(feature = "metrics")]
 mod metrics;
+mod tw;
+
+#[cfg(test)]
+mod tests;
 
 #[cfg(feature = "mastodon")]
 pub use cli::clear_toots;

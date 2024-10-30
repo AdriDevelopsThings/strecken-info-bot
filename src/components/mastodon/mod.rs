@@ -7,7 +7,9 @@ use megalodon::{
 };
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 
-use crate::{components::DisruptionInformation, filter::DisruptionFilter, Database};
+use crate::{
+    components::DisruptionInformation, filter::DisruptionFilter, tw::get_message_tw_word, Database,
+};
 
 mod format;
 
@@ -91,9 +93,15 @@ impl MastodonSender {
 
     /// Post a new status on mastodon with `status` as content in reply to a status with the id `in_reply_to_id`
     /// post_status returns the id of the created status
-    async fn post_status(&self, status: String, in_reply_to_id: Option<String>) -> String {
+    async fn post_status(
+        &self,
+        status: String,
+        in_reply_to_id: Option<String>,
+        spoiler_text: Option<String>,
+    ) -> String {
         let options = PostStatusInputOptions {
             in_reply_to_id,
+            spoiler_text,
             ..Default::default()
         };
         let status = self
@@ -129,7 +137,21 @@ impl MastodonSender {
             None => (None, None),
         };
 
-        let new_status_id = self.post_status(message, status_id).await;
+        let trigger_word = match env::var("MASTODON_TRIGGER_WARNINGS") {
+            Ok(tws) => {
+                let tws = tws.split(',').collect::<Vec<&str>>();
+                get_message_tw_word(&message, &tws)
+            }
+            _ => None,
+        };
+
+        let new_status_id = self
+            .post_status(
+                message,
+                status_id,
+                trigger_word.map(|tw| format!("TW: {tw}")),
+            )
+            .await;
         if let Some(toot_id) = toot_id {
             connection
                 .execute(
