@@ -1,10 +1,4 @@
 pub fn get_message_tw_word(message: &str, trigger_warnings: &[&str]) -> Option<String> {
-    for tw in trigger_warnings {
-        if message.contains(&tw.to_lowercase()) {
-            return Some(tw.to_string());
-        }
-    }
-
     let chars = message.chars().collect::<Vec<char>>();
     let mut words: Vec<String> = Vec::new();
     // split message into words
