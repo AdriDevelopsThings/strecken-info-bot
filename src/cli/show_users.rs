@@ -10,7 +10,7 @@ pub async fn show_users(database: Database) {
     );
     let connection = database.get_connection().await.unwrap();
     let rows = connection
-        .query("SELECT id, chat_id FROM telegram_user", &[])
+        .query("SELECT id, chat_id FROM telegram_user ORDER by id ASC", &[])
         .await
         .unwrap();
     println!("{} chats are currently registered:\n", rows.len());
