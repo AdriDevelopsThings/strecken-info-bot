@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use admin::admin_callback;
 use telexide::{create_framework, prelude::ClientBuilder, Client};
 use tokio::{
     sync::{mpsc::UnboundedReceiver, Mutex},
@@ -18,16 +19,19 @@ use self::message_sender::MessageSender;
 
 use super::DisruptionInformation;
 
+mod admin;
 mod filter;
 mod format;
 mod info;
 mod message_sender;
+mod show_users;
 mod subscribe;
 mod tw;
 mod user;
 
 pub use filter::epsg_3857_to_epsg_4326;
 pub use filter::Filter;
+pub use show_users::show_users;
 
 struct HashMapDatabase;
 impl TypeMapKey for HashMapDatabase {
@@ -60,6 +64,7 @@ pub fn create_client(bot_token: String) -> Client {
             filter
         ))
         .add_handler_func(callback)
+        .add_handler_func(admin_callback)
         .build()
 }
 
