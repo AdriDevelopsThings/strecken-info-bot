@@ -8,7 +8,8 @@ use megalodon::{
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 
 use crate::{
-    components::DisruptionInformation, filter::DisruptionFilter, tw::get_message_tw_word, Database,
+    components::DisruptionInformation, filter::DisruptionFilter, tw::get_disruption_tw_word,
+    Database,
 };
 
 mod format;
@@ -120,7 +121,12 @@ impl MastodonSender {
     /// `disruption_id` must contain the primary key of the disruption in the disruption table of the database
     /// `message` must contain the message that should be sent to mastodon
     /// the `message` string could be reduced cause of character limitations
-    async fn send_disruption(&self, disruption_id: i32, message: String) {
+    async fn send_disruption(&self, disruption_id: i32, disruption: DisruptionInformation) {
+        let message = format::format(
+            &disruption.disruption,
+            &disruption.changes,
+            disruption.update,
+        );
         let message = limit_message(message, self.max_status_characters as usize);
         let connection = self.database.get_connection().await.unwrap();
         // toot_id will contain the primary key of the toot in the toot table
@@ -140,7 +146,7 @@ impl MastodonSender {
         let trigger_word = match env::var("MASTODON_TRIGGER_WARNINGS") {
             Ok(tws) => {
                 let tws = tws.split(',').collect::<Vec<&str>>();
-                get_message_tw_word(&message, &tws)
+                get_disruption_tw_word(&disruption.disruption, &tws)
             }
             _ => None,
         };
@@ -177,15 +183,8 @@ impl MastodonSender {
         tokio::spawn(async move {
             while let Some(disruption) = self.receiver.recv().await {
                 if DisruptionFilter::filters(MASTODON_FILTERS, &disruption.disruption) {
-                    self.send_disruption(
-                        disruption.disruption_id,
-                        format::format(
-                            &disruption.disruption,
-                            &disruption.changes,
-                            disruption.update,
-                        ),
-                    )
-                    .await;
+                    self.send_disruption(disruption.disruption_id, disruption)
+                        .await;
                 }
             }
         })

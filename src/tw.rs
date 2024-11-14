@@ -1,3 +1,5 @@
+use strecken_info::disruptions::Disruption;
+
 pub fn get_message_tw_word(message: &str, trigger_warnings: &[&str]) -> Option<String> {
     let chars = message.chars().collect::<Vec<char>>();
     let mut words: Vec<String> = Vec::new();
@@ -27,6 +29,27 @@ pub fn get_message_tw_word(message: &str, trigger_warnings: &[&str]) -> Option<S
         if words.contains(&tw.to_string().to_lowercase()) {
             return Some(tw.to_string());
         }
+    }
+
+    None
+}
+
+pub fn get_disruption_tw_word(
+    disruption: &Disruption,
+    trigger_warnings: &[&str],
+) -> Option<String> {
+    if let Some(word) = get_message_tw_word(&disruption.cause, trigger_warnings) {
+        return Some(word);
+    }
+
+    if let Some(subcause) = &disruption.subcause {
+        if let Some(word) = get_message_tw_word(subcause, trigger_warnings) {
+            return Some(word);
+        }
+    }
+
+    if let Some(word) = get_message_tw_word(&disruption.text, trigger_warnings) {
+        return Some(word);
     }
 
     None
