@@ -48,6 +48,7 @@ impl MastodonSender {
             Some(mastodon_access_token),
             Some(get_user_agent()),
         )
+        .unwrap()
     }
 
     pub fn create_client_by_env() -> Box<dyn Megalodon + Send + Sync> {

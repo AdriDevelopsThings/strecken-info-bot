@@ -19,7 +19,7 @@ pub fn format_hash(disruption: &Disruption) -> String {
     input += &disruption
         .effects
         .iter()
-        .map(|effect| effect.effect.clone())
+        .map(|effect| format!("{}", effect.effect))
         .collect::<Vec<String>>()
         .join(",");
     input += "t:";
