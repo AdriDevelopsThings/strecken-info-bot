@@ -40,22 +40,20 @@ impl User {
         }
 
         let mut filters_mapped = self.filters.iter().map(|filter| match filter {
-            Filter::Location { x, y, range } => {
-                return disruption
-                    .coordinates
-                    .iter()
-                    .map(|coordinate| {
-                        if !coordinate.x.is_normal() || !coordinate.y.is_normal() {
-                            return false;
-                        }
+            Filter::Location { x, y, range } => disruption
+                .coordinates
+                .iter()
+                .map(|coordinate| {
+                    if !coordinate.x.is_normal() || !coordinate.y.is_normal() {
+                        return false;
+                    }
 
-                        let (coordinate_x, coordinate_y) =
-                            epsg_3857_to_epsg_4326(coordinate.x, coordinate.y);
-                        let distance = epsg_4326_distance_km(coordinate_x, coordinate_y, *x, *y);
-                        distance <= (*range as f64)
-                    })
-                    .any(|x| x);
-            }
+                    let (coordinate_x, coordinate_y) =
+                        epsg_3857_to_epsg_4326(coordinate.x, coordinate.y);
+                    let distance = epsg_4326_distance_km(coordinate_x, coordinate_y, *x, *y);
+                    distance <= (*range as f64)
+                })
+                .any(|x| x),
             Filter::OnlyCancellations => disruption.track_restriction == TrackRestriction::Severe,
             Filter::RailwayManagement { letter } => disruption
                 .stations
