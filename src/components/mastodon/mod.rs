@@ -7,14 +7,9 @@ use megalodon::{
 };
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 
-use crate::{
-    components::DisruptionInformation, filter::DisruptionFilter, tw::get_disruption_tw_word,
-    Database,
-};
+use crate::{components::DisruptionInformation, tw::get_disruption_tw_word, Database};
 
 mod format;
-
-const MASTODON_FILTERS: &[DisruptionFilter] = &[DisruptionFilter::TooLongDisruption { days: 7 }];
 
 fn get_user_agent() -> String {
     format!("strecken-info-bot/{}", env!("CARGO_PKG_VERSION"))
@@ -183,10 +178,8 @@ impl MastodonSender {
         info!("Mastodon sender is ready");
         tokio::spawn(async move {
             while let Some(disruption) = self.receiver.recv().await {
-                if DisruptionFilter::filters(MASTODON_FILTERS, &disruption.disruption) {
-                    self.send_disruption(disruption.disruption_id, disruption)
-                        .await;
-                }
+                self.send_disruption(disruption.disruption_id, disruption)
+                    .await;
             }
         })
     }

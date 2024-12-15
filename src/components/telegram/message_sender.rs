@@ -13,11 +13,9 @@ use crate::{
         DisruptionInformation,
     },
     database::Database,
-    filter::DisruptionFilter,
 };
 
 const MAX_REQUESTS_AT_THE_SAME_TIME: usize = 16;
-const FILTERS: &[DisruptionFilter] = &[DisruptionFilter::TooLongDisruption { days: 7 }];
 
 #[derive(Clone)]
 pub struct MessageSender {
@@ -67,10 +65,6 @@ impl MessageSender {
     ) -> Result<(), Box<dyn error::Error>> {
         info!("Telegram sender is ready");
         while let Some(disruption) = receiver.recv().await {
-            if !DisruptionFilter::filters(FILTERS, &disruption.disruption) {
-                continue;
-            }
-
             let message = format::format(&disruption.disruption, disruption.update);
 
             let connection = self.database.get_connection().await.unwrap();

@@ -4,7 +4,6 @@ mod components;
 mod database;
 mod error;
 mod fetcher;
-mod filter;
 mod format;
 #[cfg(feature = "metrics")]
 mod metrics;
