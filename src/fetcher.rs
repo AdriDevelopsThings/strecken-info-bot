@@ -3,7 +3,7 @@ use std::{env, time::Duration};
 use log::{debug, error};
 use strecken_info::{
     disruptions::{request_disruptions, Disruption},
-    filter::DisruptionsFilter,
+    filter::{DisruptionsFilter, DisruptionsFilterTime},
     revision::RevisionContext,
 };
 use tokio::sync::mpsc;
@@ -28,17 +28,24 @@ pub fn start_fetching(database: Database, components: Components) {
             .expect("Error while getting first revision");
 
         'fetch: loop {
-            let disruptions =
-                match request_disruptions(DisruptionsFilter::default(), revision).await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        error!(
-                            "Error while fetching disruptions: {:?}, retrying in 10 seconds.",
-                            e
-                        );
-                        continue 'fetch;
-                    }
-                };
+            let disruptions = match request_disruptions(
+                DisruptionsFilter {
+                    time: (DisruptionsFilterTime::Hours { hours: 24 }),
+                    ..Default::default()
+                },
+                revision,
+            )
+            .await
+            {
+                Ok(s) => s,
+                Err(e) => {
+                    error!(
+                        "Error while fetching disruptions: {:?}, retrying in 10 seconds.",
+                        e
+                    );
+                    continue 'fetch;
+                }
+            };
 
             debug!("Fetched new disruptions");
             tx.send(disruptions).unwrap();
