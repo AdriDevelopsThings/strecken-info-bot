@@ -99,6 +99,7 @@ impl MastodonSender {
         let options = PostStatusInputOptions {
             in_reply_to_id,
             spoiler_text,
+            language: Some("de".to_string()),
             ..Default::default()
         };
         let status = self
