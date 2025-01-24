@@ -9,6 +9,8 @@ use telexide::{
 
 use super::{show_users, HashMapDatabase};
 
+const TELEGRAM_MAX_MESSAGE_SIZE: usize = 4096;
+
 #[prepare_listener]
 pub async fn admin_callback(context: Context, update: Update) {
     if let UpdateContent::Message(message) = update.content {
@@ -56,11 +58,27 @@ async fn admin_message(context: Context, message: Message) -> Result<(), Box<dyn
 
     if content.as_str() == "/list_users" {
         let text = show_users(context.api.clone(), database).await;
-        context
-            .api
-            .send_message(SendMessage::new(message.chat.get_id().into(), text))
-            .await
-            .unwrap();
+        let lines = text.split('\n');
+        let mut msg = String::new();
+        for line in lines {
+            if msg.len() + line.len() + 1 >= TELEGRAM_MAX_MESSAGE_SIZE {
+                context
+                    .api
+                    .send_message(SendMessage::new(message.chat.get_id().into(), msg))
+                    .await
+                    .unwrap();
+                msg = String::new();
+            }
+            msg += line;
+            msg += "\n";
+        }
+        if !msg.is_empty() {
+            context
+                .api
+                .send_message(SendMessage::new(message.chat.get_id().into(), msg))
+                .await
+                .unwrap();
+        }
     }
 
     Ok(())
