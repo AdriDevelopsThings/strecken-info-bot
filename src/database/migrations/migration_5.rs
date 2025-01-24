@@ -6,7 +6,7 @@ use crate::{
 };
 
 // change filter coordinates from epsg 3857 to epsg 4326
-pub async fn migrate<'a>(connection: &DbConnection<'a>) -> Result<(), DbError> {
+pub async fn migrate(connection: &DbConnection<'_>) -> Result<(), DbError> {
     if !cfg!(feature = "telegram") {
         warn!("Migration will be skipped: only telegram is affected but binary was built without telegram");
     }

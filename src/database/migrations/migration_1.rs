@@ -1,7 +1,7 @@
 use crate::database::{DbConnection, DbError};
 
 /// initial database migration
-pub async fn migrate<'a>(connection: &DbConnection<'a>) -> Result<(), DbError> {
+pub async fn migrate(connection: &DbConnection<'_>) -> Result<(), DbError> {
     connection
         .execute(
             "CREATE TABLE telegram_user (

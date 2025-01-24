@@ -5,7 +5,7 @@ use crate::database::DbConnection;
 
 use super::HashMapDatabase;
 
-pub async fn subscribe_user<'a>(connection: &DbConnection<'a>, chat_id: i64) -> i32 {
+pub async fn subscribe_user(connection: &DbConnection<'_>, chat_id: i64) -> i32 {
     connection
         .query_one(
             "INSERT INTO telegram_user(chat_id) VALUES($1) ON CONFLICT(chat_id) DO UPDATE SET chat_id=EXCLUDED.chat_id RETURNING id",
