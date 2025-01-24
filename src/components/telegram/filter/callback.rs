@@ -11,7 +11,7 @@ use telexide::{
     },
 };
 
-use crate::components::telegram::{subscribe_user, Expecting, HashMapDatabase, HashMapExpecting};
+use crate::components::telegram::{get_user_id, Expecting, HashMapDatabase, HashMapExpecting};
 
 use super::{
     consts::{
@@ -49,7 +49,10 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
         .unwrap()
         .clone();
     let connection = database.get_connection().await.unwrap();
-    let user_id = subscribe_user(&connection, message.chat.get_id()).await;
+    let user_id = match get_user_id(&connection, message.chat.get_id()).await? {
+        Some(s) => s,
+        None => return Ok(()),
+    };
 
     if data == SHOW_FILTER {
         // show all configured filters
@@ -274,7 +277,10 @@ async fn callback_message(context: Context, message: Message) -> Result<(), Box<
         .unwrap()
         .clone();
     let connection = database.get_connection().await.unwrap();
-    let user_id = subscribe_user(&connection, message.chat.get_id()).await;
+    let user_id = match get_user_id(&connection, message.chat.get_id()).await? {
+        Some(s) => s,
+        None => return Ok(()),
+    };
     let expecting_arc = context
         .data
         .write()

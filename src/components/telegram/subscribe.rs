@@ -1,7 +1,7 @@
 use log::info;
 use telexide::{api::types::SendMessage, prelude::*};
 
-use crate::database::DbConnection;
+use crate::{database::DbConnection, error::StreckenInfoBotError};
 
 use super::HashMapDatabase;
 
@@ -14,6 +14,16 @@ pub async fn subscribe_user(connection: &DbConnection<'_>, chat_id: i64) -> i32 
         .await
         .unwrap()
         .get(0)
+}
+
+pub async fn get_user_id(
+    connection: &DbConnection<'_>,
+    chat_id: i64,
+) -> Result<Option<i32>, StreckenInfoBotError> {
+    Ok(connection
+        .query_opt("SELECT id FROM telegram_user WHERE chat_id=$1", &[&chat_id])
+        .await?
+        .map(|r| r.get(0)))
 }
 
 #[command(description = "Starte den Bot und abonniere Störungsmeldungen")]
