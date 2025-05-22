@@ -64,24 +64,29 @@ impl User {
                         orig_b
                     } else {
                         // trassenfinder fallback
-                        disruption
-                            .stations
-                            .iter()
-                            .chain(disruption.sections.iter().flat_map(|s| [&s.from, &s.to]))
-                            .any(|station| {
-                                if let Some(trassenfinder) = &trassenfinder {
-                                    let stations = trassenfinder.stations.blocking_read();
-                                    if let Some(coords) = stations.get(&station.name) {
-                                        let distance =
-                                            epsg_4326_distance_km(coords.0, coords.1, *x, *y);
-                                        distance <= (*range as f64)
+                        join_all(
+                            disruption
+                                .stations
+                                .iter()
+                                .chain(disruption.sections.iter().flat_map(|s| [&s.from, &s.to]))
+                                .map(async |station| {
+                                    if let Some(trassenfinder) = &trassenfinder {
+                                        let stations = trassenfinder.stations.read().await;
+                                        if let Some(coords) = stations.get(&station.name) {
+                                            let distance =
+                                                epsg_4326_distance_km(coords.0, coords.1, *x, *y);
+                                            distance <= (*range as f64)
+                                        } else {
+                                            false
+                                        }
                                     } else {
                                         false
                                     }
-                                } else {
-                                    false
-                                }
-                            })
+                                }),
+                        )
+                        .await
+                        .into_iter()
+                        .any(|x| x)
                     }
                 }
                 Filter::OnlyCancellations => {
