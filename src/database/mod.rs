@@ -2,6 +2,8 @@ use bb8::{Pool, PooledConnection};
 use bb8_postgres::{tokio_postgres::NoTls, PostgresConnectionManager};
 use thiserror::Error;
 
+use crate::TrassenfinderApi;
+
 use self::migrations::run_migrations;
 
 mod migrations;
@@ -18,16 +20,23 @@ pub enum DbError {
 #[derive(Clone)]
 pub struct Database {
     connection: Pool<PostgresConnectionManager<NoTls>>,
+    pub trassenfinder: Option<TrassenfinderApi>,
 }
 
 impl Database {
-    pub async fn new(config: &str) -> Result<Self, DbError> {
+    pub async fn new(
+        config: &str,
+        trassenfinder: Option<TrassenfinderApi>,
+    ) -> Result<Self, DbError> {
         let manager = PostgresConnectionManager::new(
             config.parse().expect("Invalid postgresql config"),
             NoTls,
         );
         let pool = Pool::builder().build(manager).await?;
-        Ok(Self { connection: pool })
+        Ok(Self {
+            connection: pool,
+            trassenfinder,
+        })
     }
 
     pub async fn get_connection(&self) -> Result<DbConnection<'_>, DbError> {

@@ -7,6 +7,7 @@ mod fetcher;
 mod format;
 #[cfg(feature = "metrics")]
 mod metrics;
+mod trassenfinder;
 mod tw;
 
 #[cfg(test)]
@@ -24,3 +25,4 @@ pub use database::Database;
 pub use fetcher::start_fetching;
 #[cfg(feature = "metrics")]
 pub use metrics::start_server;
+pub use trassenfinder::TrassenfinderApi;

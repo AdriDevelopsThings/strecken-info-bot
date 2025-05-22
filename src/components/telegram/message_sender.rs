@@ -79,7 +79,10 @@ impl MessageSender {
                 .collect::<Result<Vec<User>, serde_json::Error>>()?;
 
             for user in users {
-                if user.is_filtered(&disruption.disruption) {
+                if user
+                    .is_filtered(&disruption.disruption, &self.database.trassenfinder)
+                    .await
+                {
                     continue;
                 }
 
