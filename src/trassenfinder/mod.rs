@@ -6,6 +6,8 @@ use log::error;
 use models::Infrastructure;
 use tokio::{sync::RwLock, time::interval};
 
+use crate::normalize_spaces;
+
 mod models;
 
 const TRASSENFINDER_INFRASTRUCTURES: &str = "https://trassenfinder.de/api/web/infrastrukturen";
@@ -69,7 +71,7 @@ impl TrassenfinderApi {
                 Some(c) => c,
                 None => continue,
             };
-            stations.insert(station.ds100, (coords.lon, coords.lat));
+            stations.insert(normalize_spaces(&station.ds100), (coords.lon, coords.lat));
         }
 
         let mut stations_write = self.stations.write().await;

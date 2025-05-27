@@ -2,7 +2,7 @@ use bb8_postgres::tokio_postgres::Row;
 use futures::future::join_all;
 use strecken_info::disruptions::{Disruption, TrackRestriction};
 
-use crate::TrassenfinderApi;
+use crate::{normalize_spaces, TrassenfinderApi};
 
 use super::{epsg_3857_to_epsg_4326, epsg_4326_distance_km, Filter};
 
@@ -72,7 +72,9 @@ impl User {
                                 .map(async |station| {
                                     if let Some(trassenfinder) = &trassenfinder {
                                         let stations = trassenfinder.stations.read().await;
-                                        if let Some(coords) = stations.get(&station.name) {
+                                        if let Some(coords) =
+                                            stations.get(&normalize_spaces(&station.ril100))
+                                        {
                                             let distance =
                                                 epsg_4326_distance_km(coords.0, coords.1, *x, *y);
                                             distance <= (*range as f64)
