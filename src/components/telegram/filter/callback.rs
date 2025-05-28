@@ -236,26 +236,36 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
             .into_iter()
             .map(serde_json::from_value::<Filter>)
             .collect::<Result<Vec<Filter>, serde_json::Error>>()?;
-        connection
-            .execute(
-                "UPDATE telegram_user SET filters=$1 WHERE id=$2",
-                &[
-                    &filters
-                        .iter()
-                        .filter(|filter| filter.get_type() != filter_type) // filter all filters out that are of filter_type type
-                        .map(|f| serde_json::to_value(f).unwrap())
-                        .collect::<Vec<serde_json::Value>>(),
-                    &user_id,
-                ],
-            )
-            .await?;
-        context
-            .api
-            .send_message(SendMessage::new(
-                message.chat.get_id().into(),
-                "Der/Die Filter wurden erfolgreich gelöscht.",
-            ))
-            .await?;
+
+        let new_filters = filters
+            .iter()
+            .filter(|filter| filter.get_type() != filter_type) // filter all filters out that are of filter_type type
+            .map(|f| serde_json::to_value(f).unwrap())
+            .collect::<Vec<serde_json::Value>>();
+
+        if filters.len() == new_filters.len() {
+            context
+                .api
+                .send_message(SendMessage::new(
+                    message.chat.get_id().into(),
+                    "Du hast bisher keine Filter konfiguriert.",
+                ))
+                .await?;
+        } else {
+            connection
+                .execute(
+                    "UPDATE telegram_user SET filters=$1 WHERE id=$2",
+                    &[&new_filters, &user_id],
+                )
+                .await?;
+            context
+                .api
+                .send_message(SendMessage::new(
+                    message.chat.get_id().into(),
+                    "Der/Die Filter wurden erfolgreich gelöscht.",
+                ))
+                .await?;
+        }
     } else {
         Err(format!("Callback query data '{data}' is not valid data."))?;
     }
