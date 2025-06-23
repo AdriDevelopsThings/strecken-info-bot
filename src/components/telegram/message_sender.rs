@@ -8,13 +8,12 @@ use telexide::{
 use tokio::sync::{mpsc::UnboundedReceiver, Semaphore};
 
 use crate::{
-    components::{
-        telegram::{format, user::User},
-        DisruptionInformation,
-    },
+    components::{telegram::user::User, ComponentType},
+    data::DataDisruptionInformation,
     database::Database,
 };
 
+const COMPONENT_TYPE: ComponentType = ComponentType::Telegram;
 const MAX_REQUESTS_AT_THE_SAME_TIME: usize = 16;
 
 #[derive(Clone)]
@@ -61,11 +60,11 @@ impl MessageSender {
 
     pub async fn start_polling(
         &self,
-        mut receiver: UnboundedReceiver<DisruptionInformation>,
+        mut receiver: UnboundedReceiver<DataDisruptionInformation>,
     ) -> Result<(), Box<dyn error::Error>> {
         info!("Telegram sender is ready");
         while let Some(disruption) = receiver.recv().await {
-            let message = format::format(&disruption.disruption, disruption.update);
+            let message = disruption.format(COMPONENT_TYPE);
 
             let connection = self.database.get_connection().await.unwrap();
             let statement = connection
@@ -80,7 +79,7 @@ impl MessageSender {
 
             for user in users {
                 if user
-                    .is_filtered(&disruption.disruption, &self.database.trassenfinder)
+                    .is_filtered(disruption.disruption.as_ref(), &self.database.trassenfinder)
                     .await
                 {
                     continue;

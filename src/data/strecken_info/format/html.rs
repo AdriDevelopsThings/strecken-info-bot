@@ -1,12 +1,12 @@
 use html_escape::encode_text;
 use strecken_info::disruptions::Disruption;
 
-use crate::format::{
+use crate::data::strecken_info::format::{
     format_text,
     partial_format::{get_cause, get_location, get_prefix, get_product_effects, get_times},
 };
 
-pub(super) fn format(disruption: &Disruption, update: bool) -> String {
+pub fn format(disruption: &Disruption, update: bool) -> String {
     let head = format!(
         "{}\n{}",
         get_cause(disruption),

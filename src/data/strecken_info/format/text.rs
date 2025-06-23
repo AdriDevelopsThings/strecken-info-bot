@@ -1,6 +1,6 @@
 use strecken_info::disruptions::Disruption;
 
-use crate::{
+use crate::data::strecken_info::{
     change::DisruptionPart,
     format::{
         format_text,
@@ -8,7 +8,7 @@ use crate::{
     },
 };
 
-pub(super) fn format(disruption: &Disruption, changes: &[DisruptionPart], update: bool) -> String {
+pub fn format(disruption: &Disruption, changes: &[DisruptionPart], update: bool) -> String {
     let mut str = format!(
         "{} {}\n{}\n",
         get_prefix(disruption, update),

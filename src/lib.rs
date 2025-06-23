@@ -1,10 +1,8 @@
-mod change;
 mod cli;
 mod components;
+mod data;
 mod database;
 mod error;
-mod fetcher;
-mod format;
 #[cfg(feature = "metrics")]
 mod metrics;
 mod trassenfinder;
@@ -22,8 +20,8 @@ pub use cli::show_users;
 #[cfg(feature = "mastodon")]
 pub use components::mastodon::MastodonSender;
 pub use components::Components;
+pub use data::start_fetching;
 pub use database::Database;
-pub use fetcher::start_fetching;
 #[cfg(feature = "metrics")]
 pub use metrics::start_server;
 pub use trassenfinder::TrassenfinderApi;

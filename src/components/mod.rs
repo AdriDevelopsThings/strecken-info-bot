@@ -1,13 +1,15 @@
 use std::env;
 
 use log::{error, info, warn};
-use strecken_info::disruptions::Disruption;
 use tokio::{
     sync::mpsc::{unbounded_channel, UnboundedSender},
     task::JoinHandle,
 };
 
-use crate::{change::DisruptionPart, Database};
+use crate::{
+    data::{DataDisruptionInformation, AVAILABLE_DATA_SOURCES},
+    Database,
+};
 
 #[cfg(feature = "mastodon")]
 pub mod mastodon;
@@ -18,45 +20,45 @@ pub mod telegram;
 #[cfg(feature = "telegram")]
 use crate::components::telegram::run_bot;
 
-pub struct DisruptionInformation {
-    pub disruption_id: i32,
-    pub changes: Vec<DisruptionPart>,
-    pub update: bool,
-    pub disruption: Disruption,
+pub enum ComponentType {
+    #[cfg(feature = "telegram")]
+    Telegram,
+    #[cfg(feature = "mastodon")]
+    Mastodon,
 }
 
 #[derive(Clone)]
 pub struct Components {
-    channels: Vec<UnboundedSender<DisruptionInformation>>,
+    channels: Vec<UnboundedSender<DataDisruptionInformation>>,
 }
 
 impl Components {
-    pub fn new(channels: Vec<UnboundedSender<DisruptionInformation>>) -> Self {
+    pub fn new(channels: Vec<UnboundedSender<DataDisruptionInformation>>) -> Self {
         Self { channels }
     }
 
     pub async fn by_env(database: Database) -> (Self, Vec<JoinHandle<()>>) {
-        let mut channels: Vec<UnboundedSender<DisruptionInformation>> = Vec::new();
+        let mut channels: Vec<UnboundedSender<DataDisruptionInformation>> = Vec::new();
         let mut tasks = Vec::new();
-        if let Ok(mastodon_url) = env::var("MASTODON_URL") {
-            if !cfg!(feature = "mastodon") {
-                panic!("You tried to enable mastodon but this binary was built without mastodon feature.");
-            }
-            let mastodon_access_token = env::var("MASTODON_ACCESS_TOKEN")
-                .expect("Environment variable 'MASTODON_ACCESS_TOKEN' not set");
-            #[cfg(feature = "mastodon")]
-            {
+        for data_source in AVAILABLE_DATA_SOURCES {
+            if let Ok(mastodon_url) = env::var(format!("MASTODON_{data_source}_URL")) {
+                let mastodon_access_token = env::var(format!(
+                    "MASTODON_{data_source}_ACCESS_TOKEN"
+                ))
+                .expect("Environment variable 'MASTODON_{data_source}_ACCESS_TOKEN' not set");
+
                 let (mastodon_sender, mastodon_receiver) =
-                    unbounded_channel::<DisruptionInformation>();
+                    unbounded_channel::<DataDisruptionInformation>();
                 let mastodon = MastodonSender::new(
                     database.clone(),
                     mastodon_receiver,
                     mastodon_url,
                     mastodon_access_token,
+                    data_source.to_string(),
                 )
                 .await;
                 tasks.push(mastodon.start_polling());
-                info!("Mastodon started");
+                info!("Mastodon for data source {data_source} started");
                 channels.push(mastodon_sender);
             }
         }
@@ -68,7 +70,7 @@ impl Components {
             #[cfg(feature = "telegram")]
             {
                 let (telegram_sender, telegram_receiver) =
-                    unbounded_channel::<DisruptionInformation>();
+                    unbounded_channel::<DataDisruptionInformation>();
                 tasks.extend(run_bot(database, telegram_receiver, bot_token).await);
                 info!("Telegram started");
                 channels.push(telegram_sender);
@@ -82,20 +84,9 @@ impl Components {
         (Self::new(channels), tasks)
     }
 
-    pub fn push(
-        &self,
-        disruption_id: i32,
-        changes: Vec<DisruptionPart>,
-        update: bool,
-        disruption: Disruption,
-    ) {
+    pub fn push(&self, disruption: DataDisruptionInformation) {
         for channel in &self.channels {
-            if let Err(e) = channel.send(DisruptionInformation {
-                disruption_id,
-                changes: changes.clone(),
-                update,
-                disruption: disruption.clone(),
-            }) {
+            if let Err(e) = channel.send(disruption.clone()) {
                 error!(
                     "Error while sending new disruption information: {e}. Error will be ignored."
                 );

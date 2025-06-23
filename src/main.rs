@@ -70,7 +70,7 @@ async fn main() {
 
         let (components, tasks) = Components::by_env(database.clone()).await;
 
-        start_fetching(database.clone(), components);
+        start_fetching(database.clone(), components).await;
 
         #[cfg(feature = "metrics")]
         start_server(database.clone()).await;

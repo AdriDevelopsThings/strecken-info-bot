@@ -11,15 +11,16 @@ use telexide::{
     },
 };
 
-use crate::components::telegram::{get_user_id, Expecting, HashMapDatabase, HashMapExpecting};
+use crate::components::telegram::{
+    filter::{Filter, StreckenInfoFilter},
+    filter_ui::consts::REMOVE_FILTER,
+    get_user_id, Expecting, HashMapDatabase, HashMapExpecting,
+};
 
-use super::{
-    consts::{
-        ADD_FILTER, AVAILABLE_RIL100_RAILWAY_MANAGEMENTS, CHANGE_FILTER_BEHAVIOUR,
-        CHANGE_FILTER_BEHAVIOUR_ALL, CHANGE_FILTER_BEHAVIOUR_ONE, LOCATION, ONLY_CANCELLATIONS,
-        RAILWAY_MANAGEMENT, REMOVE_FILTER, REMOVE_FILTER_PREFIX, SHOW_FILTER,
-    },
-    model::Filter,
+use super::consts::{
+    ADD_FILTER, AVAILABLE_RIL100_RAILWAY_MANAGEMENTS, CHANGE_FILTER_BEHAVIOUR,
+    CHANGE_FILTER_BEHAVIOUR_ALL, CHANGE_FILTER_BEHAVIOUR_ONE, CONFIGURE_FILTER_PREFIX, LOCATION,
+    ONLY_CANCELLATIONS, RAILWAY_MANAGEMENT, REMOVE_FILTER_PREFIX, SHOW_FILTER,
 };
 
 #[prepare_listener]
@@ -86,28 +87,53 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
             .await?;
     } else if data == ADD_FILTER {
         // add a filter
-        let mut loc_btn = InlineKeyboardButton::new("Umkreis um einen Standort", false);
-        loc_btn.callback_data = Some(LOCATION.to_string());
-
-        let mut only_cancellations_btn = InlineKeyboardButton::new("Nur Ausfälle anzeigen", false);
-        only_cancellations_btn.callback_data = Some(ONLY_CANCELLATIONS.to_string());
-
-        let mut railway_management_btn = InlineKeyboardButton::new("Nach Bahndirektion", false);
-        railway_management_btn.callback_data = Some(RAILWAY_MANAGEMENT.to_string());
+        // the user should now select for which data source a filter should be created
+        let mut strecken_info_btn = InlineKeyboardButton::new("Strecken.Info", false);
+        strecken_info_btn.callback_data =
+            Some(CONFIGURE_FILTER_PREFIX.to_string() + "strecken_info");
 
         let mut markup = InlineKeyboardMarkup::new();
-        markup.add_row(vec![loc_btn]);
-        markup.add_row(vec![only_cancellations_btn]);
-        markup.add_row(vec![railway_management_btn]);
+        markup.add_row(vec![strecken_info_btn]);
 
         let mut send_message = SendMessage::new(
             message.chat.get_id().into(),
-            "Welche Art Filter möchtest du hinzufügen?",
+            "Für welche Datenquelle soll ein Filter hinzugefügt werden?",
         );
         send_message.reply_markup = Some(ReplyMarkup::InlineKeyboardMarkup(markup));
         context.api.send_message(send_message).await?;
+    } else if data.starts_with(CONFIGURE_FILTER_PREFIX) {
+        // configure a filter
+        let data_source = data.split_at(CONFIGURE_FILTER_PREFIX.len()).1;
+
+        let mut send_message: SendMessage;
+        if data_source == "strecken_info" {
+            let mut loc_btn = InlineKeyboardButton::new("Umkreis um einen Standort", false);
+            loc_btn.callback_data = Some(LOCATION.to_string());
+
+            let mut only_cancellations_btn =
+                InlineKeyboardButton::new("Nur Ausfälle anzeigen", false);
+            only_cancellations_btn.callback_data = Some(ONLY_CANCELLATIONS.to_string());
+
+            let mut railway_management_btn = InlineKeyboardButton::new("Nach Bahndirektion", false);
+            railway_management_btn.callback_data = Some(RAILWAY_MANAGEMENT.to_string());
+
+            let mut markup = InlineKeyboardMarkup::new();
+            markup.add_row(vec![loc_btn]);
+            markup.add_row(vec![only_cancellations_btn]);
+            markup.add_row(vec![railway_management_btn]);
+
+            send_message = SendMessage::new(
+                message.chat.get_id().into(),
+                "Welche Art Filter möchtest du hinzufügen?",
+            );
+            send_message.reply_markup = Some(ReplyMarkup::InlineKeyboardMarkup(markup));
+        } else {
+            unreachable!("Invalid data source for configuring telegram filter");
+        }
+
+        context.api.send_message(send_message).await?;
     } else if data == REMOVE_FILTER {
-        // remove a filter
+        // remove filter
         let filters: Vec<Filter> = connection
             .query_one(
                 "SELECT filters FROM telegram_user WHERE id = $1",
@@ -130,8 +156,8 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
         } else {
             let mut markup = InlineKeyboardMarkup::new();
             for filter in filters {
-                let mut btn = InlineKeyboardButton::new(filter.get_type(), false);
-                btn.callback_data = Some(format!("{REMOVE_FILTER_PREFIX}{}", filter.get_type()));
+                let mut btn = InlineKeyboardButton::new(format!("{filter}"), false);
+                btn.callback_data = Some(format!("{REMOVE_FILTER_PREFIX}{}", filter.get_id()));
                 markup.add_button(btn);
             }
 
@@ -200,7 +226,9 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
         expecting.insert(user_id, Expecting::Location); // we expect the user to send us a location
         context.api.send_message(SendMessage::new(message.chat.get_id().into(), "Schicke mir nun einen Standort. Du kannst danach konfigurieren in welchem Radius um den Standort eine Störung liegen muss, damit ich sie dir schicke.")).await?;
     } else if data == ONLY_CANCELLATIONS {
-        let filter = serde_json::to_value(Filter::OnlyCancellations).unwrap();
+        let filter =
+            serde_json::to_value(Filter::StreckenInfo(StreckenInfoFilter::OnlyCancellations))
+                .unwrap();
         connection.execute("UPDATE telegram_user SET filters=array_append(filters, $1) WHERE id=$2 AND NOT filters @> $3", &[
             &filter,
             &user_id,
@@ -239,7 +267,7 @@ async fn callback_query(context: Context, query: CallbackQuery) -> Result<(), Bo
 
         let new_filters = filters
             .iter()
-            .filter(|filter| filter.get_type() != filter_type) // filter all filters out that are of filter_type type
+            .filter(|filter| filter.get_id() != filter_type) // filter all filters out that are of filter_type type
             .map(|f| serde_json::to_value(f).unwrap())
             .collect::<Vec<serde_json::Value>>();
 
@@ -328,7 +356,10 @@ async fn callback_message(context: Context, message: Message) -> Result<(), Box<
                     message.chat.get_id().into(),
                         match content.parse::<u16>() {
                             Ok(range) => {
-                                connection.execute("UPDATE telegram_user SET filters=array_append(filters, $1) WHERE id=$2", &[&serde_json::to_value(Filter::Location { x: *lon, y: *lat, range }).unwrap(), &user_id]).await?;
+                                connection.execute("UPDATE telegram_user SET filters=array_append(filters, $1) WHERE id=$2", &[
+                                    &serde_json::to_value(Filter::StreckenInfo(StreckenInfoFilter::Location { x: *lon, y: *lat, range })).unwrap(),
+                                    &user_id
+                                ]).await?;
                                 expectings.remove_entry(&user_id);
                                 "Der Filter wurde erfolgreich erstellt."
                             }
@@ -365,9 +396,11 @@ async fn callback_message(context: Context, message: Message) -> Result<(), Box<
                     .execute(
                         "UPDATE telegram_user SET filters=array_append(filters, $1) WHERE id=$2",
                         &[
-                            &serde_json::to_value(Filter::RailwayManagement {
-                                letter: first_char.unwrap(),
-                            })
+                            &serde_json::to_value(Filter::StreckenInfo(
+                                StreckenInfoFilter::RailwayManagement {
+                                    letter: first_char.unwrap(),
+                                },
+                            ))
                             .unwrap(),
                             &user_id,
                         ],

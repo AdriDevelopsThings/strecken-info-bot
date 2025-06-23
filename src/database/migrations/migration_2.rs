@@ -1,7 +1,9 @@
-use crate::database::{DbConnection, DbError};
+use tokio_postgres::Transaction;
 
-pub async fn migrate(connection: &DbConnection<'_>) -> Result<(), DbError> {
-    connection
+use crate::database::DbError;
+
+pub async fn migrate(tranaction: &Transaction<'_>) -> Result<(), DbError> {
+    tranaction
         .execute("ALTER TABLE disruption ADD json JSONB", &[])
         .await?;
     Ok(())
