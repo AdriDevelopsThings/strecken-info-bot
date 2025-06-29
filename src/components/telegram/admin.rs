@@ -21,15 +21,6 @@ pub async fn admin_callback(context: Context, update: Update) {
 }
 
 async fn admin_message(context: Context, message: Message) -> Result<(), Box<dyn Error>> {
-    // get admin user id
-    let admin_user_id = match env::var("TELEGRAM_ADMIN_USER_ID") {
-        Ok(v) => v.parse::<i64>()?,
-        Err(_) => {
-            warn!("Someone (id: {}) tried to use an admin command but `TELEGRAM_ADMIN_USER_ID` is not set.", message.from.map(|user| user.id.to_string()).unwrap_or_else(|| "<I don't know>".to_string()));
-            return Ok(());
-        }
-    };
-
     // get message content
     let content = match message.content {
         MessageContent::Text {
@@ -37,6 +28,19 @@ async fn admin_message(context: Context, message: Message) -> Result<(), Box<dyn
             entities: _,
         } => content,
         _ => return Ok(()),
+    };
+
+    if !["/list_users"].contains(&content.as_str()) {
+        return Ok(());
+    }
+
+    // get admin user id
+    let admin_user_id = match env::var("TELEGRAM_ADMIN_USER_ID") {
+        Ok(v) => v.parse::<i64>()?,
+        Err(_) => {
+            warn!("Someone (id: {}) tried to use an admin command but `TELEGRAM_ADMIN_USER_ID` is not set.", message.from.map(|user| user.id.to_string()).unwrap_or_else(|| "<I don't know>".to_string()));
+            return Ok(());
+        }
     };
 
     // check admin permissions of sender
