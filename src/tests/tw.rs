@@ -18,4 +18,12 @@ fn test_tw_words() {
         ),
         Some("Suizid".to_string())
     );
+
+    assert_eq!(
+        get_message_tw_word(
+            "Außerdem ist zu testen, wenn das letzte Wort das TW Wort ist: Personenunfall",
+            &["Personenunfall"]
+        ),
+        Some("Personenunfall".to_string())
+    );
 }
