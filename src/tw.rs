@@ -1,6 +1,10 @@
 use strecken_info::disruptions::Disruption;
 
 pub fn get_message_tw_word(message: &str, trigger_warnings: &[&str]) -> Option<String> {
+    if message.is_empty() {
+        return None;
+    }
+
     let chars = message.chars().collect::<Vec<char>>();
     let mut words: Vec<String> = Vec::new();
     // split message into words
@@ -23,6 +27,17 @@ pub fn get_message_tw_word(message: &str, trigger_warnings: &[&str]) -> Option<S
             // i is start of word
             start_of_word = Some(i);
         }
+    }
+
+    // loop ends -> end of word reached
+    if let Some(start_of_word) = start_of_word {
+        // word is from start_of_word to i-1
+        words.push(
+            chars[start_of_word..chars.len()]
+                .iter()
+                .collect::<String>()
+                .to_lowercase(),
+        );
     }
 
     for tw in trigger_warnings {
