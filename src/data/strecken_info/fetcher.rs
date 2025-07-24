@@ -47,10 +47,7 @@ pub fn start_fetching(
             {
                 Ok(s) => s,
                 Err(e) => {
-                    error!(
-                        "Error while fetching disruptions: {:?}, retrying in 10 seconds.",
-                        e
-                    );
+                    error!("Error while fetching disruptions: {e:?}, retrying in 10 seconds.");
                     continue 'fetch;
                 }
             };
