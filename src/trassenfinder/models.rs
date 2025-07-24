@@ -3,8 +3,6 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 pub struct Infrastructure {
     pub id: i32,
-    #[serde(rename = "anzeigename")]
-    pub displayname: String,
     #[serde(rename = "fahrplanjahr")]
     pub year: i32,
     #[serde(rename = "ordnungsrahmen", default)]

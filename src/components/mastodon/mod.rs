@@ -7,9 +7,9 @@ use megalodon::{
 };
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 
-use crate::{components::DisruptionInformation, tw::get_disruption_tw_word, Database};
-
-mod format;
+use crate::{
+    components::ComponentType, data::DataDisruptionInformation, tw::get_message_tw_word, Database,
+};
 
 fn get_user_agent() -> String {
     format!("strecken-info-bot/{}", env!("CARGO_PKG_VERSION"))
@@ -26,9 +26,10 @@ fn limit_message(message: String, limit: usize) -> String {
 }
 
 pub struct MastodonSender {
+    data_source: String,
     client: Box<dyn Megalodon + Send + Sync>,
     database: Database,
-    receiver: UnboundedReceiver<DisruptionInformation>,
+    receiver: UnboundedReceiver<DataDisruptionInformation>,
     max_status_characters: u32,
 }
 
@@ -46,25 +47,19 @@ impl MastodonSender {
         .unwrap()
     }
 
-    pub fn create_client_by_env() -> Box<dyn Megalodon + Send + Sync> {
-        Self::create_client(
-            env::var("MASTODON_URL").expect("Environment variable 'MASTODON_URL' not set"),
-            env::var("MASTODON_ACCESS_TOKEN")
-                .expect("Environment variable 'MASTODON_ACCESS_TOKEN' not set"),
-        )
-    }
-
     /// Create a new MastodonSender if mastodon is configured
     /// MastodonSender::new will return None if mastodon isn't configured
     pub async fn new(
         database: Database,
-        receiver: UnboundedReceiver<DisruptionInformation>,
+        receiver: UnboundedReceiver<DataDisruptionInformation>,
         mastodon_url: String,
         mastodon_access_token: String,
+        data_source: String,
     ) -> Self {
         let client = Self::create_client(mastodon_url, mastodon_access_token);
 
         let mut sender = Self {
+            data_source,
             client,
             database,
             receiver,
@@ -118,12 +113,13 @@ impl MastodonSender {
     /// `disruption_id` must contain the primary key of the disruption in the disruption table of the database
     /// `message` must contain the message that should be sent to mastodon
     /// the `message` string could be reduced cause of character limitations
-    async fn send_disruption(&self, disruption_id: i32, disruption: DisruptionInformation) {
-        let message = format::format(
-            &disruption.disruption,
-            &disruption.changes,
-            disruption.update,
-        );
+    async fn send_disruption(&self, disruption: DataDisruptionInformation) {
+        // only send disruptions with type `self.data_source`
+        if disruption.disruption.get_type() != self.data_source {
+            return;
+        }
+
+        let message = disruption.format(ComponentType::Mastodon);
         let message = limit_message(message, self.max_status_characters as usize);
         let connection = self.database.get_connection().await.unwrap();
         // toot_id will contain the primary key of the toot in the toot table
@@ -131,7 +127,7 @@ impl MastodonSender {
         let (toot_id, status_id) = match connection
             .query_opt(
                 "SELECT id, status_id FROM mastodon_toot WHERE disruption_id=$1",
-                &[&disruption_id],
+                &[&disruption.id],
             )
             .await
             .unwrap()
@@ -143,7 +139,7 @@ impl MastodonSender {
         let trigger_word = match env::var("MASTODON_TRIGGER_WARNINGS") {
             Ok(tws) => {
                 let tws = tws.split(',').collect::<Vec<&str>>();
-                get_disruption_tw_word(&disruption.disruption, &tws)
+                get_message_tw_word(&disruption.disruption.format_tws(), &tws)
             }
             _ => None,
         };
@@ -167,7 +163,7 @@ impl MastodonSender {
             connection
                 .execute(
                     "INSERT INTO mastodon_toot(status_id, disruption_id) VALUES ($1,$2)",
-                    &[&new_status_id, &disruption_id],
+                    &[&new_status_id, &disruption.id],
                 )
                 .await
                 .unwrap();
@@ -179,8 +175,7 @@ impl MastodonSender {
         info!("Mastodon sender is ready");
         tokio::spawn(async move {
             while let Some(disruption) = self.receiver.recv().await {
-                self.send_disruption(disruption.disruption_id, disruption)
-                    .await;
+                self.send_disruption(disruption).await;
             }
         })
     }

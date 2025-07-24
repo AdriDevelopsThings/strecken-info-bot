@@ -1,7 +1,5 @@
 use strecken_info::disruptions::Disruption;
 
-use crate::format::hash::format_hash;
-
 pub const ALL_DISRUPTION_PARTS: &[DisruptionPart] = &[
     DisruptionPart::Cause,
     DisruptionPart::Effects,
@@ -21,7 +19,6 @@ pub enum DisruptionPart {
 
 pub fn get_disruption_changes(
     database_disruption: Option<Disruption>,
-    hash: String,
     new_disruption: &Disruption,
 ) -> Vec<DisruptionPart> {
     if let Some(database_disruption) = database_disruption {
@@ -54,10 +51,5 @@ pub fn get_disruption_changes(
         return parts;
     }
 
-    let new_hash = format_hash(new_disruption);
-    if new_hash == hash {
-        Vec::new()
-    } else {
-        ALL_DISRUPTION_PARTS.to_vec()
-    }
+    ALL_DISRUPTION_PARTS.to_vec()
 }

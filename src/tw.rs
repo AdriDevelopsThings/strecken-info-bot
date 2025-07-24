@@ -1,5 +1,6 @@
-use strecken_info::disruptions::Disruption;
-
+/// search for trigger warnings in a mesage
+/// if a triggering word was found the word gets returned
+/// if no word was found `None` gets returned
 pub fn get_message_tw_word(message: &str, trigger_warnings: &[&str]) -> Option<String> {
     if message.is_empty() {
         return None;
@@ -44,27 +45,6 @@ pub fn get_message_tw_word(message: &str, trigger_warnings: &[&str]) -> Option<S
         if words.contains(&tw.to_string().to_lowercase()) {
             return Some(tw.to_string());
         }
-    }
-
-    None
-}
-
-pub fn get_disruption_tw_word(
-    disruption: &Disruption,
-    trigger_warnings: &[&str],
-) -> Option<String> {
-    if let Some(word) = get_message_tw_word(&disruption.cause, trigger_warnings) {
-        return Some(word);
-    }
-
-    if let Some(subcause) = &disruption.subcause {
-        if let Some(word) = get_message_tw_word(subcause, trigger_warnings) {
-            return Some(word);
-        }
-    }
-
-    if let Some(word) = get_message_tw_word(&disruption.text, trigger_warnings) {
-        return Some(word);
     }
 
     None

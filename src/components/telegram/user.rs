@@ -1,10 +1,6 @@
 use bb8_postgres::tokio_postgres::Row;
-use futures::future::join_all;
-use strecken_info::disruptions::{Disruption, TrackRestriction};
 
-use crate::{normalize_spaces, TrassenfinderApi};
-
-use super::{epsg_3857_to_epsg_4326, epsg_4326_distance_km, Filter};
+use crate::components::telegram::filter::Filter;
 
 pub struct User {
     pub chat_id: i64,
@@ -35,77 +31,5 @@ impl User {
             }
         }
         None
-    }
-
-    pub async fn is_filtered(
-        &self,
-        disruption: &Disruption,
-        trassenfinder: &Option<TrassenfinderApi>,
-    ) -> bool {
-        if self.filters.is_empty() {
-            return false;
-        }
-
-        let mut filters_mapped = join_all(self.filters.iter().map(async |filter| {
-            match filter {
-                Filter::Location { x, y, range } => {
-                    let orig_b = disruption.coordinates.iter().any(|coordinate| {
-                        if !coordinate.x.is_normal() || !coordinate.y.is_normal() {
-                            return false;
-                        }
-
-                        let (coordinate_x, coordinate_y) =
-                            epsg_3857_to_epsg_4326(coordinate.x, coordinate.y);
-                        let distance = epsg_4326_distance_km(coordinate_x, coordinate_y, *x, *y);
-                        distance <= (*range as f64)
-                    });
-
-                    if orig_b {
-                        orig_b
-                    } else {
-                        // trassenfinder fallback
-                        join_all(
-                            disruption
-                                .stations
-                                .iter()
-                                .chain(disruption.sections.iter().flat_map(|s| [&s.from, &s.to]))
-                                .map(async |station| {
-                                    if let Some(trassenfinder) = &trassenfinder {
-                                        let stations = trassenfinder.stations.read().await;
-                                        if let Some(coords) =
-                                            stations.get(&normalize_spaces(&station.ril100))
-                                        {
-                                            let distance =
-                                                epsg_4326_distance_km(coords.0, coords.1, *x, *y);
-                                            distance <= (*range as f64)
-                                        } else {
-                                            false
-                                        }
-                                    } else {
-                                        false
-                                    }
-                                }),
-                        )
-                        .await
-                        .into_iter()
-                        .any(|x| x)
-                    }
-                }
-                Filter::OnlyCancellations => {
-                    disruption.track_restriction == TrackRestriction::Severe
-                }
-                Filter::RailwayManagement { letter } => disruption
-                    .stations
-                    .iter()
-                    .any(|station| station.ril100.starts_with(*letter)),
-            }
-        }))
-        .await
-        .into_iter();
-
-        match self.one_filter_enough {
-            true => !filters_mapped.any(|x| x),
-            false => !filters_mapped.all(|x| x),
-        }
     }
 }

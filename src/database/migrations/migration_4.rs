@@ -1,7 +1,9 @@
-use crate::database::{DbConnection, DbError};
+use tokio_postgres::Transaction;
 
-pub async fn migrate(connection: &DbConnection<'_>) -> Result<(), DbError> {
-    connection
+use crate::database::DbError;
+
+pub async fn migrate(transaction: &Transaction<'_>) -> Result<(), DbError> {
+    transaction
         .execute(
             "ALTER TABLE telegram_user ADD one_filter_enough BOOLEAN DEFAULT FALSE NOT NULL",
             &[],

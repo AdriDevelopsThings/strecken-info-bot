@@ -8,20 +8,18 @@ use tokio::{
 };
 use typemap_rev::TypeMapKey;
 
-use filter::*;
+use filter_ui::*;
 use info::*;
 use subscribe::*;
 use tw::*;
 
-use crate::Database;
+use crate::{data::DataDisruptionInformation, Database};
 
 use self::message_sender::MessageSender;
 
-use super::DisruptionInformation;
-
 mod admin;
-mod filter;
-mod format;
+pub mod filter;
+mod filter_ui;
 mod info;
 mod message_sender;
 mod show_users;
@@ -29,8 +27,7 @@ mod subscribe;
 mod tw;
 mod user;
 
-pub use filter::epsg_3857_to_epsg_4326;
-pub use filter::Filter;
+pub use filter_ui::epsg_3857_to_epsg_4326;
 pub use show_users::show_users;
 
 struct HashMapDatabase;
@@ -70,7 +67,7 @@ pub fn create_client(bot_token: String) -> Client {
 
 pub async fn run_bot(
     database: Database,
-    receiver: UnboundedReceiver<DisruptionInformation>,
+    receiver: UnboundedReceiver<DataDisruptionInformation>,
     bot_token: String,
 ) -> [JoinHandle<()>; 2] {
     let client = create_client(bot_token);

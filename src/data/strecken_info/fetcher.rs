@@ -1,6 +1,6 @@
 use std::{env, time::Duration};
 
-use log::{debug, error};
+use log::{debug, error, info};
 use strecken_info::{
     disruptions::{request_disruptions, Disruption},
     filter::{DisruptionsFilter, DisruptionsFilterTime},
@@ -9,14 +9,22 @@ use strecken_info::{
 use tokio::sync::mpsc;
 
 use crate::{
-    change::{get_disruption_changes, ALL_DISRUPTION_PARTS},
+    data::{
+        strecken_info::{
+            change::{get_disruption_changes, ALL_DISRUPTION_PARTS},
+            StreckenInfoDisruption, STRECKEN_INFO_TYPE,
+        },
+        DataDisruption,
+    },
     database::Database,
     error::StreckenInfoBotError,
-    format::hash::format_hash,
-    Components,
 };
 
-pub fn start_fetching(database: Database, components: Components) {
+pub fn start_fetching(
+    database: Database,
+    data_sender: mpsc::Sender<(Box<dyn DataDisruption>, bool)>,
+) {
+    info!("strecken-info fetching started.");
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<Disruption>>();
     tokio::spawn(async move {
         let mut revision_ctx = RevisionContext::connect()
@@ -39,10 +47,7 @@ pub fn start_fetching(database: Database, components: Components) {
             {
                 Ok(s) => s,
                 Err(e) => {
-                    error!(
-                        "Error while fetching disruptions: {:?}, retrying in 10 seconds.",
-                        e
-                    );
+                    error!("Error while fetching disruptions: {e:?}, retrying in 10 seconds.");
                     continue 'fetch;
                 }
             };
@@ -68,7 +73,7 @@ pub fn start_fetching(database: Database, components: Components) {
 
     tokio::spawn(async move {
         while let Some(s) = rx.recv().await {
-            if let Err(e) = fetched(database.clone(), s, components.clone()).await {
+            if let Err(e) = fetched(database.clone(), s, data_sender.clone()).await {
                 error!("Error while handling new fetch: {e}");
             }
         }
@@ -88,7 +93,7 @@ async fn do_heartbeat() {
 async fn fetched(
     database: Database,
     disruptions: Vec<Disruption>,
-    components: Components,
+    data_sender: mpsc::Sender<(Box<dyn DataDisruption>, bool)>,
 ) -> Result<(), StreckenInfoBotError> {
     let connection = database.get_connection().await?;
 
@@ -96,71 +101,41 @@ async fn fetched(
     for disruption in disruptions {
         let db_disruption = connection
             .query_opt(
-                "SELECT id, hash, json FROM disruption WHERE key=$1",
-                &[&disruption.key],
+                "SELECT json FROM disruption WHERE data_source=$1 AND key=$2",
+                &[&STRECKEN_INFO_TYPE, &disruption.key],
             )
             .await?;
         // changes: list of parts of disruption that changed
         // update: true => disruption was updated, false => disruption is new
         // disruption_id: id of disruption in database
         // contains_json: database already contains json
-        let (changes, update, disruption_id, contains_json) = match db_disruption {
+        let (changes, updated) = match db_disruption {
             Some(row) => {
                 let db_disruption = row
-                    .get::<_, Option<serde_json::Value>>(2)
+                    .get::<_, Option<serde_json::Value>>(0)
                     .map(serde_json::from_value)
                     .transpose()?;
-                let contains_json = db_disruption.is_some();
                 Ok::<_, StreckenInfoBotError>((
-                    get_disruption_changes(db_disruption, row.get(1), &disruption),
+                    get_disruption_changes(db_disruption, &disruption),
                     true,
-                    Some(row.get(0)),
-                    contains_json,
                 ))
             }
-            None => Ok((ALL_DISRUPTION_PARTS.to_vec(), false, None, false)), // all parts changed (new disruption)
+            None => Ok((ALL_DISRUPTION_PARTS.to_vec(), false)), // all parts changed (new disruption)
         }?;
         if !changes.is_empty() {
             change_count += 1;
             // Entry changed
 
-            // disruption is new or was updated, insert or update
-            let returning = connection
-                .query_one(
-                    "INSERT INTO disruption(key, hash, start_time, end_time, json) VALUES($1, $2, $3, $4, $5)
-                ON CONFLICT(key) DO UPDATE
-                SET hash=EXCLUDED.hash,
-                    start_time=EXCLUDED.start_time,
-                    end_time=EXCLUDED.end_time,
-                    json=EXCLUDED.json
-                RETURNING id",
-                    &[
-                        &disruption.key,
-                        &format_hash(&disruption),
-                        &disruption.period.start,
-                        &disruption.period.end,
-                        &serde_json::to_value(&disruption).unwrap()
-                    ],
-                )
-                .await?;
-
-            components.push(
-                disruption_id.unwrap_or_else(|| returning.get(0)),
-                changes,
-                update,
-                disruption.clone(),
-            );
-        } else if !contains_json {
-            // disruption already exists, but doesn't contain json yet
-            connection
-                .execute(
-                    "UPDATE disruption SET json=$1 WHERE id=$2",
-                    &[
-                        &serde_json::to_value(&disruption)?,
-                        &disruption_id.unwrap(), // disruption_id is some, never none
-                    ],
-                )
-                .await?;
+            data_sender
+                .send((
+                    Box::new(StreckenInfoDisruption {
+                        disruption: disruption.clone(),
+                        changes,
+                    }),
+                    updated,
+                ))
+                .await
+                .unwrap();
         }
     }
     debug!("{change_count} disruptions found/changed");

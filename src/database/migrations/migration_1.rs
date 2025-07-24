@@ -1,8 +1,10 @@
-use crate::database::{DbConnection, DbError};
+use tokio_postgres::Transaction;
+
+use crate::database::DbError;
 
 /// initial database migration
-pub async fn migrate(connection: &DbConnection<'_>) -> Result<(), DbError> {
-    connection
+pub async fn migrate(transaction: &Transaction<'_>) -> Result<(), DbError> {
+    transaction
         .execute(
             "CREATE TABLE telegram_user (
                     id SERIAL PRIMARY KEY,
@@ -14,7 +16,7 @@ pub async fn migrate(connection: &DbConnection<'_>) -> Result<(), DbError> {
         )
         .await?;
 
-    connection
+    transaction
         .execute(
             "CREATE TABLE disruption (
                 id SERIAL PRIMARY KEY,
@@ -27,7 +29,7 @@ pub async fn migrate(connection: &DbConnection<'_>) -> Result<(), DbError> {
         )
         .await?;
 
-    connection
+    transaction
         .execute(
             "CREATE TABLE mastodon_toot (
         id SERIAL PRIMARY KEY,
