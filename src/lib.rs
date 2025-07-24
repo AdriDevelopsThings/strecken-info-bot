@@ -12,8 +12,6 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "mastodon")]
-pub use cli::clear_toots;
 pub use cli::reset_disruptions;
 #[cfg(feature = "telegram")]
 pub use cli::show_users;

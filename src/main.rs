@@ -4,8 +4,6 @@ use clap::Parser;
 use dotenv::dotenv;
 use env_logger::Env;
 use log::error;
-#[cfg(feature = "mastodon")]
-use strecken_info_bot::clear_toots;
 #[cfg(feature = "telegram")]
 use strecken_info_bot::show_users;
 #[cfg(feature = "metrics")]
@@ -21,9 +19,6 @@ struct Args {
     show_users: bool,
     #[arg(short, long)]
     reset_disruptions: bool,
-    #[cfg(feature = "mastodon")]
-    #[arg(short, long)]
-    clear_toots: bool,
 }
 
 #[tokio::main]
@@ -41,11 +36,6 @@ async fn main() {
         .initialize()
         .await
         .expect("Error while initializing database");
-    #[cfg(feature = "mastodon")]
-    if args.clear_toots {
-        clear_toots(database).await;
-        return;
-    }
 
     #[cfg(feature = "telegram")]
     if args.show_users {

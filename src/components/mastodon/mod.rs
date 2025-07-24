@@ -47,14 +47,6 @@ impl MastodonSender {
         .unwrap()
     }
 
-    pub fn create_client_by_env() -> Box<dyn Megalodon + Send + Sync> {
-        Self::create_client(
-            env::var("MASTODON_URL").expect("Environment variable 'MASTODON_URL' not set"),
-            env::var("MASTODON_ACCESS_TOKEN")
-                .expect("Environment variable 'MASTODON_ACCESS_TOKEN' not set"),
-        )
-    }
-
     /// Create a new MastodonSender if mastodon is configured
     /// MastodonSender::new will return None if mastodon isn't configured
     pub async fn new(
