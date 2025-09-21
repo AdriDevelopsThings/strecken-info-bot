@@ -8,8 +8,12 @@ use megalodon::{
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 
 use crate::{
-    components::ComponentType, data::DataDisruptionInformation, tw::get_message_tw_word, Database,
+    components::{mastodon::tw::get_trigger_word, ComponentType},
+    data::DataDisruptionInformation,
+    Database,
 };
+
+mod tw;
 
 fn get_user_agent() -> String {
     format!("strecken-info-bot/{}", env!("CARGO_PKG_VERSION"))
@@ -136,13 +140,7 @@ impl MastodonSender {
             None => (None, None),
         };
 
-        let trigger_word = match env::var("MASTODON_TRIGGER_WARNINGS") {
-            Ok(tws) => {
-                let tws = tws.split(',').collect::<Vec<&str>>();
-                get_message_tw_word(&disruption.disruption.format_tws(), &tws)
-            }
-            _ => None,
-        };
+        let trigger_word = get_trigger_word(&disruption);
 
         let new_status_id = self
             .post_status(
