@@ -2,9 +2,9 @@ use std::{collections::HashMap, error::Error, sync::Arc, time::Duration};
 
 use chrono::{Datelike, Utc};
 use chrono_tz::Europe;
-use log::error;
 use models::Infrastructure;
 use tokio::{sync::RwLock, time::interval};
+use tracing::{debug, error};
 
 use crate::normalize_spaces;
 
@@ -45,6 +45,8 @@ impl TrassenfinderApi {
                 if let Err(e) = s.reload_stations().await {
                     error!("Error while reloading trassenfinder stations: {e:?}");
                 }
+
+                debug!("Reloaded trassenfinder infrastructure and stations");
             }
         });
     }

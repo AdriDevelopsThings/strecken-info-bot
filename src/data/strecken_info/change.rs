@@ -8,7 +8,7 @@ pub const ALL_DISRUPTION_PARTS: &[DisruptionPart] = &[
     DisruptionPart::Text,
 ];
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum DisruptionPart {
     Cause,
     Effects,

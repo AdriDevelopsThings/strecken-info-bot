@@ -2,8 +2,6 @@ use std::env;
 
 use clap::Parser;
 use dotenv::dotenv;
-use env_logger::Env;
-use log::error;
 #[cfg(feature = "telegram")]
 use strecken_info_bot::show_users;
 #[cfg(feature = "metrics")]
@@ -11,6 +9,8 @@ use strecken_info_bot::start_server;
 use strecken_info_bot::{
     reset_disruptions, start_fetching, Components, Database, TrassenfinderApi,
 };
+use tracing::error;
+use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -23,9 +23,15 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-    let args = Args::parse();
     dotenv().ok();
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+    let subscriber = FmtSubscriber::builder()
+        .with_env_filter(env_filter)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("Failed to set subscriebr");
+
+    let args = Args::parse();
     let mut database = Database::new(
         &env::var("POSTGRESQL_CONFIG").expect("No POSTGRESQL_CONFIG environment variable supplied"),
         None,

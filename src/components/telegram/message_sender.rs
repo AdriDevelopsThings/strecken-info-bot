@@ -1,11 +1,11 @@
 use std::{error, sync::Arc};
 
-use log::{error, info};
 use telexide::{
     api::{types::SendMessage, API},
     Error, TelegramError,
 };
 use tokio::sync::{mpsc::UnboundedReceiver, Semaphore};
+use tracing::{error, info};
 
 use crate::{
     components::{telegram::user::User, ComponentType},

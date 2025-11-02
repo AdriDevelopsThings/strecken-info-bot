@@ -1,5 +1,5 @@
-use log::error;
 use std::env;
+use tracing::error;
 
 use crate::{
     data::DataDisruptionInformation,

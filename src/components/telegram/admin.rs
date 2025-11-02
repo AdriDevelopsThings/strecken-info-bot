@@ -1,4 +1,3 @@
-use log::{error, warn};
 use std::{env, error::Error};
 use telexide::{
     api::types::SendMessage,
@@ -6,6 +5,7 @@ use telexide::{
     macros::prepare_listener,
     model::{Message, MessageContent, Update, UpdateContent},
 };
+use tracing::{error, warn};
 
 use super::{show_users, HashMapDatabase};
 

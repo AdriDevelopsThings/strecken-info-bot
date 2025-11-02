@@ -1,12 +1,12 @@
 use std::{env, time::Duration};
 
-use log::{debug, error, info};
 use strecken_info::{
     disruptions::{request_disruptions, Disruption},
     filter::{DisruptionsFilter, DisruptionsFilterTime},
     revision::RevisionContext,
 };
 use tokio::sync::mpsc;
+use tracing::{debug, error, info};
 
 use crate::{
     data::{
@@ -67,7 +67,8 @@ pub fn start_fetching(
                         "Error while trying to reconnect to websocket and get first revision",
                     )
                 }
-            }
+            };
+            debug!(revision, "Got new revision");
         }
     });
 
@@ -99,6 +100,7 @@ async fn fetched(
 
     let mut change_count = 0;
     for disruption in disruptions {
+        debug!("key" = disruption.key, "Looking into disruptio ");
         let db_disruption = connection
             .query_opt(
                 "SELECT json FROM disruption WHERE data_source=$1 AND key=$2",
@@ -123,6 +125,7 @@ async fn fetched(
             None => Ok((ALL_DISRUPTION_PARTS.to_vec(), false)), // all parts changed (new disruption)
         }?;
         if !changes.is_empty() {
+            debug!(?changes, "key" = disruption.key, "Disruption has changes");
             change_count += 1;
             // Entry changed
 

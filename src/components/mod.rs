@@ -1,10 +1,10 @@
 use std::env;
 
-use log::{error, info, warn};
 use tokio::{
     sync::mpsc::{unbounded_channel, UnboundedSender},
     task::JoinHandle,
 };
+use tracing::{error, info};
 
 use crate::{
     data::{DataDisruptionInformation, AVAILABLE_DATA_SOURCES},
@@ -78,7 +78,7 @@ impl Components {
         }
 
         if channels.is_empty() {
-            warn!("No distribution configured!");
+            error!("No distribution configured!");
         }
 
         (Self::new(channels), tasks)

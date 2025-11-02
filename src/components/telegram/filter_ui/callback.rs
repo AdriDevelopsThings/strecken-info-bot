@@ -1,6 +1,5 @@
 use std::error::Error;
 
-use log::warn;
 use telexide::{
     api::types::{AnswerCallbackQuery, SendMessage},
     client::Context,
@@ -10,6 +9,7 @@ use telexide::{
         ReplyMarkup, Update, UpdateContent,
     },
 };
+use tracing::warn;
 
 use crate::components::telegram::{
     filter::{Filter, StreckenInfoFilter},

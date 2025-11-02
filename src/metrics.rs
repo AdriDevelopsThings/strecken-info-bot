@@ -1,8 +1,8 @@
 use std::env;
 
 use axum::{extract, response::IntoResponse, routing, serve, Router};
-use log::info;
 use reqwest::StatusCode;
+use tracing::info;
 
 use crate::{database::DbError, Database};
 

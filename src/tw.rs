@@ -1,5 +1,5 @@
-use log::error;
 use regex::Regex;
+use tracing::error;
 
 pub struct TriggerWarningRegex<'a> {
     pub name: &'a str,

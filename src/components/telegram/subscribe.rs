@@ -1,5 +1,5 @@
-use log::info;
 use telexide::{api::types::SendMessage, prelude::*};
+use tracing::info;
 
 use crate::{database::DbConnection, error::StreckenInfoBotError};
 

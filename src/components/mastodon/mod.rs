@@ -1,11 +1,11 @@
 use std::env;
 
-use log::info;
 use megalodon::{
     megalodon::{PostStatusInputOptions, PostStatusOutput},
     Megalodon,
 };
 use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
+use tracing::info;
 
 use crate::{
     components::{mastodon::tw::get_trigger_word, ComponentType},
