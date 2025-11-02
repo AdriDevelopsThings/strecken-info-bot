@@ -100,7 +100,7 @@ async fn fetched(
 
     let mut change_count = 0;
     for disruption in disruptions {
-        debug!("key" = disruption.key, "Looking into disruptio ");
+        debug!("key" = disruption.key, "Working on disruption");
         let db_disruption = connection
             .query_opt(
                 "SELECT json FROM disruption WHERE data_source=$1 AND key=$2",
