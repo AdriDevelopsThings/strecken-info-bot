@@ -5,7 +5,7 @@ use strecken_info::{
     filter::{DisruptionsFilter, DisruptionsFilterTime},
     revision::RevisionContext,
 };
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 use tracing::{debug, error, info};
 
 use crate::{
@@ -23,6 +23,7 @@ use crate::{
 pub fn start_fetching(
     database: Database,
     data_sender: mpsc::Sender<(Box<dyn DataDisruption>, bool)>,
+    mut exit_rx: broadcast::Receiver<()>,
 ) {
     info!("strecken-info fetching started.");
     let (tx, mut rx) = mpsc::unbounded_channel::<Vec<Disruption>>();
@@ -54,18 +55,30 @@ pub fn start_fetching(
 
             debug!("Fetched new disruptions");
             tx.send(disruptions).unwrap();
-            revision = match revision_ctx
-                .wait_for_new_revision_filtered_timeout(true, Some(Duration::from_secs(60 * 10)))
-                .await
-            {
-                Ok(revision) => revision,
-                Err(_) => {
-                    revision_ctx = RevisionContext::connect()
-                        .await
-                        .expect("Error while trying to reconnect to websocket");
-                    revision_ctx.get_first_revision().await.expect(
-                        "Error while trying to reconnect to websocket and get first revision",
-                    )
+
+            let revision_fut = revision_ctx
+                .wait_for_new_revision_filtered_timeout(true, Some(Duration::from_secs(60 * 10)));
+            revision = tokio::select! {
+                _ = exit_rx.recv() => {
+                    return;
+                }
+
+                result = revision_fut => {
+                    match result {
+                        Ok(revision) => revision,
+                        Err(_) => {
+                            revision_ctx = RevisionContext::connect()
+                                .await
+                                .expect("Error while trying to reconnect to websocket");
+
+                            revision_ctx
+                                .get_first_revision()
+                                .await
+                                .expect(
+                                    "Error while trying to reconnect to websocket and get first revision",
+                                )
+                        }
+                    }
                 }
             };
             debug!(revision, "Got new revision");

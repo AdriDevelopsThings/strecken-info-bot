@@ -2,7 +2,7 @@ use std::any::Any;
 
 use chrono::NaiveDateTime;
 use serde_json::Value;
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 use crate::{components::ComponentType, data::clone::DataDisruptionClone, Components, Database};
 
@@ -39,10 +39,14 @@ impl DataDisruptionInformation {
     }
 }
 
-pub async fn start_fetching(database: Database, components: Components) {
+pub async fn start_fetching(
+    database: Database,
+    components: Components,
+    exit_tx: broadcast::Sender<()>,
+) {
     let (tx, mut rx) = mpsc::channel::<(Box<dyn DataDisruption>, bool)>(16);
 
-    strecken_info::start_fetching(database.clone(), tx);
+    strecken_info::start_fetching(database.clone(), tx, exit_tx.subscribe());
 
     tokio::spawn(async move {
         let connection = database.get_connection().await.unwrap();

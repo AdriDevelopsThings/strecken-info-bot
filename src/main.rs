@@ -7,7 +7,11 @@ use strecken_info_bot::show_users;
 use strecken_info_bot::{
     reset_disruptions, start_fetching, Components, Database, TrassenfinderApi,
 };
-use tracing::error;
+use tokio::{
+    signal::unix::{signal, SignalKind},
+    sync::broadcast,
+};
+use tracing::{error, info};
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 #[derive(Parser, Debug)]
@@ -50,9 +54,11 @@ async fn main() {
     if args.reset_disruptions {
         reset_disruptions(database).await;
     } else {
+        let (exit_tx, _) = broadcast::channel::<()>(1);
+
         let trassenfinder = match TrassenfinderApi::new().await {
             Ok(t) => {
-                t.start_reloading().await;
+                t.start_reloading(exit_tx.subscribe()).await;
                 Some(t)
             }
             Err(e) => {
@@ -62,9 +68,9 @@ async fn main() {
         };
         database.trassenfinder = trassenfinder;
 
-        let (components, tasks) = Components::by_env(database.clone()).await;
+        let (components, tasks) = Components::by_env(database.clone(), exit_tx.clone()).await;
 
-        start_fetching(database.clone(), components).await;
+        start_fetching(database.clone(), components, exit_tx.clone()).await;
 
         // exit the process if a worker panics
         let default_panic = std::panic::take_hook();
@@ -72,6 +78,15 @@ async fn main() {
             default_panic(info);
             std::process::exit(1);
         }));
+
+        // handle SIGTERM and SIGINT
+        let mut sigterm = signal(SignalKind::terminate()).unwrap();
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {}
+            _ = sigterm.recv() => {}
+        };
+        exit_tx.send(()).unwrap();
+        info!("Graceful shutdown...");
 
         futures::future::join_all(tasks).await;
     }

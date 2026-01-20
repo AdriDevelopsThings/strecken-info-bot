@@ -1,7 +1,10 @@
 use std::env;
 
 use tokio::{
-    sync::mpsc::{unbounded_channel, UnboundedSender},
+    sync::{
+        broadcast,
+        mpsc::{unbounded_channel, UnboundedSender},
+    },
     task::JoinHandle,
 };
 use tracing::{error, info};
@@ -37,7 +40,10 @@ impl Components {
         Self { channels }
     }
 
-    pub async fn by_env(database: Database) -> (Self, Vec<JoinHandle<()>>) {
+    pub async fn by_env(
+        database: Database,
+        exit_tx: broadcast::Sender<()>,
+    ) -> (Self, Vec<JoinHandle<()>>) {
         let mut channels: Vec<UnboundedSender<DataDisruptionInformation>> = Vec::new();
         let mut tasks = Vec::new();
         for data_source in AVAILABLE_DATA_SOURCES {
@@ -71,7 +77,9 @@ impl Components {
             {
                 let (telegram_sender, telegram_receiver) =
                     unbounded_channel::<DataDisruptionInformation>();
-                tasks.extend(run_bot(database, telegram_receiver, bot_token).await);
+                tasks.extend(
+                    run_bot(database, telegram_receiver, bot_token, exit_tx.subscribe()).await,
+                );
                 info!("Telegram started");
                 channels.push(telegram_sender);
             }

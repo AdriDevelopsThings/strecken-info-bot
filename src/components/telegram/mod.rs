@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use admin::admin_callback;
 use telexide::{create_framework, prelude::ClientBuilder, Client};
 use tokio::{
-    sync::{mpsc::UnboundedReceiver, Mutex},
+    sync::{broadcast, mpsc::UnboundedReceiver, Mutex},
     task::JoinHandle,
 };
 use typemap_rev::TypeMapKey;
@@ -69,6 +69,7 @@ pub async fn run_bot(
     database: Database,
     receiver: UnboundedReceiver<DataDisruptionInformation>,
     bot_token: String,
+    mut exit_rx: broadcast::Receiver<()>,
 ) -> [JoinHandle<()>; 2] {
     let client = create_client(bot_token);
     let api_client = client.api_client.clone();
@@ -87,10 +88,12 @@ pub async fn run_bot(
                 .expect("Error while running message sender");
         }),
         tokio::spawn(async move {
-            client
-                .start()
-                .await
-                .expect("Error while running telegram bot");
+            tokio::select! {
+                _ = exit_rx.recv() => {}
+                c = client.start() => {
+                    c.expect("Error while running telegram bot");
+                }
+            };
         }),
     ]
 }

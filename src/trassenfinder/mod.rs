@@ -3,7 +3,10 @@ use std::{collections::HashMap, error::Error, sync::Arc, time::Duration};
 use chrono::{Datelike, Utc};
 use chrono_tz::Europe;
 use models::Infrastructure;
-use tokio::{sync::RwLock, time::interval};
+use tokio::{
+    sync::{broadcast, RwLock},
+    time::interval,
+};
 use tracing::{debug, error};
 
 use crate::normalize_spaces;
@@ -31,12 +34,17 @@ impl TrassenfinderApi {
         Ok(s)
     }
 
-    pub async fn start_reloading(&self) {
+    pub async fn start_reloading(&self, mut exit_rx: broadcast::Receiver<()>) {
         let s = self.clone();
         tokio::spawn(async move {
             let mut i = interval(TRASSENFINDER_RELOAD_DURATION);
             loop {
-                i.tick().await;
+                tokio::select! {
+                    _ = i.tick() => {}
+                    _ = exit_rx.recv() => {
+                        return;
+                    }
+                };
 
                 if let Err(e) = s.reload_infrastructure_ids().await {
                     error!("Error while reloading trassenfinder infrastructure id: {e:?}");
