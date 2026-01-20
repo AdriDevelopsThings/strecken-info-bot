@@ -41,10 +41,10 @@ async fn start(context: Context, message: Message) -> CommandResult {
         message
             .from
             .map(|user| format!(
-                "{} {} ({})",
+                "{}{}{}",
                 user.first_name,
-                user.last_name.unwrap_or_else(|| "None".to_string()),
-                user.username.unwrap_or_else(|| "None".to_string())
+                user.last_name.map(|n| format!(" {n}")).unwrap_or_default(),
+                user.username.map(|u| format!(" (@{u})")).unwrap_or_default()
             ))
             .unwrap_or_default()
     );
