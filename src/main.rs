@@ -4,8 +4,6 @@ use clap::Parser;
 use dotenv::dotenv;
 #[cfg(feature = "telegram")]
 use strecken_info_bot::show_users;
-#[cfg(feature = "metrics")]
-use strecken_info_bot::start_server;
 use strecken_info_bot::{
     reset_disruptions, start_fetching, Components, Database, TrassenfinderApi,
 };
@@ -67,9 +65,6 @@ async fn main() {
         let (components, tasks) = Components::by_env(database.clone()).await;
 
         start_fetching(database.clone(), components).await;
-
-        #[cfg(feature = "metrics")]
-        start_server(database.clone()).await;
 
         // exit the process if a worker panics
         let default_panic = std::panic::take_hook();
