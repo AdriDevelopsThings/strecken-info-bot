@@ -31,7 +31,11 @@ pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> St
     locations.extend(disruption.regions.iter().cloned());
     locations.dedup();
     if locations.is_empty() {
-        locations.push("Unbekannt".to_string())
+        if disruption.collective_report {
+            locations.push("Sammelmeldung".to_string());
+        } else {
+            locations.push("Unbekannt".to_string());
+        }
     }
 
     if let Some(max_locations) = max_locations {
