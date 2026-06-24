@@ -31,7 +31,11 @@ pub fn get_location(disruption: &Disruption, max_locations: Option<usize>) -> St
     locations.extend(disruption.regions.iter().cloned());
     locations.dedup();
     if locations.is_empty() {
-        locations.push("Unbekannt".to_string())
+        if disruption.collective_report {
+            locations.push("Sammelmeldung".to_string());
+        } else {
+            locations.push("Unbekannt".to_string());
+        }
     }
 
     if let Some(max_locations) = max_locations {
@@ -85,9 +89,17 @@ pub fn get_product_effects(disruption: &Disruption) -> String {
 
 pub fn get_times(disruption: &Disruption) -> String {
     format!(
-        "{} bis {}",
+        "{} bis {}{}{}",
         disruption.period.start.format("%d.%m.%Y %H:%M"),
-        disruption.period.end.format("%d.%m.%Y %H:%M")
+        match disruption.time_of_day {
+            Some(_) => "ca. ",
+            None => "",
+        },
+        disruption.period.end.format("%d.%m.%Y %H:%M"),
+        match &disruption.time_of_day {
+            Some(t) => format!(" ({t})"),
+            None => String::new(),
+        }
     )
 }
 
